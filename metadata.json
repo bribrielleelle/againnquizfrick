@@ -1,0 +1,6 @@
+{
+  "name": "AgainQuiz",
+  "description": "AgainQuiz application connected to https://github.com/bribrielleelle/againquiz.git",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
