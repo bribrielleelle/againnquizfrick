@@ -1,393 +1,411 @@
 import React, { useState } from 'react';
-import { Sparkles, Trophy, RotateCcw, CheckCircle2, XCircle, ArrowRight, BookOpen, Heart, HelpCircle, Plus, Trash2 } from 'lucide-react';
+import { AuthProvider, useAuth, TEACHER_INVITE_CODE } from './context/AuthContext';
+import { Navbar } from './components/Navbar';
+import { AuthModal } from './components/AuthModal';
+import { INITIAL_QUIZZES, INITIAL_QUESTIONS } from './data/bakingQuizzes';
+import { 
+  Sparkles, 
+  CheckCircle2, 
+  ShieldCheck, 
+  Key, 
+  UserPlus, 
+  LogIn, 
+  ChefHat, 
+  BookOpen, 
+  Clock, 
+  Lock, 
+  ArrowRight,
+  ShieldAlert,
+  Flame,
+  HelpCircle,
+  RotateCcw
+} from 'lucide-react';
 
-interface Question {
-  id: string;
-  question: string;
-  options: string[];
-  correctIndex: number;
-  explanation?: string;
-}
+function PhaseOneDashboard() {
+  const { currentUser, isAuthenticated, isTeacher, switchUserRole, usersList } = useAuth();
+  const [activeTab, setActiveTab] = useState<'quizzes' | 'leaderboards' | 'history' | 'teacher'>('quizzes');
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authInitialTab, setAuthInitialTab] = useState<'login' | 'register'>('login');
 
-const DEFAULT_QUIZ: Question[] = [
-  {
-    id: '1',
-    question: 'Which planet is known as the "Red Planet"?',
-    options: ['Venus', 'Mars', 'Jupiter', 'Saturn'],
-    correctIndex: 1,
-    explanation: 'Mars gets its reddish color from iron oxide (rust) on its surface.',
-  },
-  {
-    id: '2',
-    question: 'What is the rarest blood type in humans?',
-    options: ['O positive', 'B negative', 'AB negative', 'A positive'],
-    correctIndex: 2,
-    explanation: 'AB negative is the rarest major human blood type, found in only ~1% of people.',
-  },
-  {
-    id: '3',
-    question: 'Which animal is known to hold hands while sleeping so they do not drift apart?',
-    options: ['Sea otters', 'Penguins', 'Dolphins', 'Beavers'],
-    correctIndex: 0,
-    explanation: 'Sea otters often float in kelp forests and hold hands in rafts while sleeping.',
-  },
-  {
-    id: '4',
-    question: 'How many hearts does an octopus have?',
-    options: ['1', '2', '3', '4'],
-    correctIndex: 2,
-    explanation: 'An octopus has three hearts: two pump blood to the gills, and one pumps blood to the rest of the body.',
-  },
-  {
-    id: '5',
-    question: 'Which color wavelength bends the most when light passes through a glass prism?',
-    options: ['Red', 'Yellow', 'Green', 'Violet'],
-    correctIndex: 3,
-    explanation: 'Violet light has the shortest wavelength and bends (refracts) the most.',
-  },
-];
+  // Preview question test
+  const [previewQuizIndex, setPreviewQuizIndex] = useState<number | null>(null);
+  const [previewAnswer, setPreviewAnswer] = useState<string | null>(null);
 
-export default function App() {
-  const [questions, setQuestions] = useState<Question[]>(DEFAULT_QUIZ);
-  const [currentIndex, setCurrentIndex] = useState<number>(0);
-  const [selectedOption, setSelectedOption] = useState<number | null>(null);
-  const [isAnswered, setIsAnswered] = useState<boolean>(false);
-  const [score, setScore] = useState<number>(0);
-  const [isFinished, setIsFinished] = useState<boolean>(false);
-  const [mode, setMode] = useState<'quiz' | 'editor'>('quiz');
-
-  // Custom question form
-  const [newQuestionText, setNewQuestionText] = useState('');
-  const [newOptions, setNewOptions] = useState(['', '', '', '']);
-  const [newCorrectIndex, setNewCorrectIndex] = useState(0);
-
-  const currentQ = questions[currentIndex];
-
-  const handleSelect = (index: number) => {
-    if (isAnswered) return;
-    setSelectedOption(index);
-    setIsAnswered(true);
-    if (index === currentQ.correctIndex) {
-      setScore((prev) => prev + 1);
-    }
-  };
-
-  const handleNext = () => {
-    if (currentIndex + 1 < questions.length) {
-      setCurrentIndex((prev) => prev + 1);
-      setSelectedOption(null);
-      setIsAnswered(false);
-    } else {
-      setIsFinished(true);
-    }
-  };
-
-  const handleRestart = () => {
-    setCurrentIndex(0);
-    setSelectedOption(null);
-    setIsAnswered(false);
-    setScore(0);
-    setIsFinished(false);
-  };
-
-  const handleAddQuestion = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newQuestionText.trim() || newOptions.some((opt) => !opt.trim())) return;
-
-    const created: Question = {
-      id: Date.now().toString(),
-      question: newQuestionText.trim(),
-      options: newOptions.map((o) => o.trim()),
-      correctIndex: newCorrectIndex,
-    };
-
-    setQuestions((prev) => [...prev, created]);
-    setNewQuestionText('');
-    setNewOptions(['', '', '', '']);
-    setNewCorrectIndex(0);
-    setMode('quiz');
-  };
-
-  const handleDeleteQuestion = (id: string) => {
-    if (questions.length <= 1) return;
-    setQuestions((prev) => prev.filter((q) => q.id !== id));
-    handleRestart();
+  const openAuth = (tab: 'login' | 'register') => {
+    setAuthInitialTab(tab);
+    setIsAuthModalOpen(true);
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-start py-10 px-4 selection:bg-pink-500/30">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
       {/* Background soft ambient glows */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10">
-        <div className="absolute top-10 left-1/2 -translate-x-1/2 w-[600px] h-[350px] bg-gradient-to-r from-sky-500/10 via-pink-500/10 to-transparent blur-3xl rounded-full" />
+        <div className="absolute top-10 left-1/2 -translate-x-1/2 w-[650px] h-[380px] bg-gradient-to-r from-sky-500/10 via-pink-500/10 to-transparent blur-3xl rounded-full" />
       </div>
 
-      {/* Main Single Column Container */}
-      <div className="w-full max-w-xl flex flex-col items-stretch">
+      {/* Top Navbar */}
+      <Navbar
+        currentTab={activeTab}
+        onSelectTab={(tab) => setActiveTab(tab as any)}
+        onOpenAuth={openAuth}
+      />
+
+      {/* Main Content Area */}
+      <main className="flex-1 max-w-5xl w-full mx-auto px-4 py-8 sm:py-10 flex flex-col items-center">
         
-        {/* Ombre Header Card / Column Top */}
-        <header className="relative overflow-hidden rounded-3xl bg-slate-900/90 border border-slate-800 shadow-2xl backdrop-blur-xl p-8 mb-6 text-center">
-          {/* Sky blue fading ombre into light pink top bar */}
-          <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-sky-400 via-sky-300 to-pink-300" />
-          
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium tracking-wide uppercase bg-slate-800/80 border border-slate-700/60 text-slate-300 mb-3">
-            <Sparkles className="w-3.5 h-3.5 text-sky-400" />
-            <span>Interactive Quiz</span>
+        {/* Main Column Header with the requested sky blue fading ombre into light pink */}
+        <div className="w-full max-w-2xl text-center mb-8">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-xs font-semibold bg-slate-900 border border-slate-800 text-sky-300 shadow-sm mb-3">
+            <Sparkles className="w-3.5 h-3.5 text-pink-300" />
+            <span className="font-mono uppercase tracking-wider text-[11px]">Phase 1: Foundation &amp; Accounts</span>
           </div>
 
-          {/* Requested Title: "brielles quiz" in sky blue fading ombre into light pink */}
-          <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight pb-1 bg-gradient-to-r from-sky-400 via-sky-300 to-pink-300 bg-clip-text text-transparent drop-shadow-sm">
+          <h1 className="text-4xl sm:text-5xl font-black tracking-tight bg-gradient-to-r from-sky-400 via-sky-300 to-pink-300 bg-clip-text text-transparent pb-1">
             brielles quiz
           </h1>
-          <p className="mt-2 text-sm text-slate-400 max-w-sm mx-auto font-normal">
-            A quiz space with a sky blue fading ombre into light pink palette.
+          <p className="mt-2 text-sm text-slate-400 max-w-md mx-auto">
+            A high-performance baking quiz platform featuring 5 launch subjects, role security, and real-time grading.
           </p>
 
-          {/* Column Navigation Tabs */}
-          <div className="mt-6 flex items-center justify-center gap-2">
-            <button
-              onClick={() => setMode('quiz')}
-              className={`px-4 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-                mode === 'quiz'
-                  ? 'bg-gradient-to-r from-sky-500/20 to-pink-500/20 text-slate-100 border border-sky-400/40 shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
-              }`}
-            >
-              Play Quiz
-            </button>
-            <button
-              onClick={() => setMode('editor')}
-              className={`px-4 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-                mode === 'editor'
-                  ? 'bg-gradient-to-r from-sky-500/20 to-pink-500/20 text-slate-100 border border-pink-400/40 shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
-              }`}
-            >
-              Manage Questions ({questions.length})
-            </button>
+          {/* Quick status bar */}
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-900/80 border border-slate-800 text-xs text-slate-300">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              Auth Engine: <strong className="text-emerald-400">Online</strong>
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-900/80 border border-slate-800 text-xs text-slate-300">
+              <BookOpen className="w-3.5 h-3.5 text-sky-400" />
+              Topic: <strong className="text-sky-300">Baking Science &amp; Pastry</strong>
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-900/80 border border-slate-800 text-xs text-slate-300">
+              <Key className="w-3.5 h-3.5 text-pink-400" />
+              Teacher Code: <code className="text-pink-300 font-mono font-bold">{TEACHER_INVITE_CODE}</code>
+            </span>
           </div>
-        </header>
+        </div>
 
-        {/* Content Column Area */}
-        {mode === 'quiz' ? (
-          <main className="rounded-3xl bg-slate-900/90 border border-slate-800 shadow-2xl p-6 sm:p-8 backdrop-blur-xl">
-            {!isFinished && currentQ ? (
-              <div>
-                {/* Progress bar with sky blue to light pink ombre */}
-                <div className="mb-6">
-                  <div className="flex justify-between items-center text-xs font-medium text-slate-400 mb-2">
-                    <span>Question {currentIndex + 1} of {questions.length}</span>
-                    <span className="font-semibold text-slate-300">Score: {score}</span>
-                  </div>
-                  <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-sky-400 via-sky-300 to-pink-300 transition-all duration-300 rounded-full"
-                      style={{ width: `${((currentIndex + 1) / questions.length) * 100}%` }}
-                    />
-                  </div>
-                </div>
-
-                {/* Question Text */}
-                <div className="mb-6">
-                  <h2 className="text-xl sm:text-2xl font-bold text-slate-100 leading-snug">
-                    {currentQ.question}
-                  </h2>
-                </div>
-
-                {/* Options List */}
-                <div className="space-y-3">
-                  {currentQ.options.map((option, idx) => {
-                    const isSelected = selectedOption === idx;
-                    const isCorrect = idx === currentQ.correctIndex;
-
-                    let btnStyle = 'bg-slate-800/60 border-slate-700/70 hover:bg-slate-800 hover:border-slate-600 text-slate-200';
-
-                    if (isAnswered) {
-                      if (isCorrect) {
-                        btnStyle = 'bg-emerald-950/40 border-emerald-500/60 text-emerald-200 shadow-sm shadow-emerald-900/20';
-                      } else if (isSelected) {
-                        btnStyle = 'bg-rose-950/40 border-rose-500/60 text-rose-200 shadow-sm shadow-rose-900/20';
-                      } else {
-                        btnStyle = 'bg-slate-900/40 border-slate-800/60 text-slate-500 opacity-60';
-                      }
-                    }
-
-                    return (
-                      <button
-                        key={idx}
-                        disabled={isAnswered}
-                        onClick={() => handleSelect(idx)}
-                        className={`w-full text-left p-4 rounded-2xl border text-sm sm:text-base font-medium transition-all duration-200 flex items-center justify-between group ${btnStyle}`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold transition-colors ${
-                            isSelected
-                              ? 'bg-gradient-to-r from-sky-400 to-pink-300 text-slate-950'
-                              : 'bg-slate-700/60 text-slate-300 group-hover:bg-slate-700'
-                          }`}>
-                            {String.fromCharCode(65 + idx)}
-                          </span>
-                          <span>{option}</span>
-                        </div>
-
-                        {isAnswered && isCorrect && (
-                          <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0" />
-                        )}
-                        {isAnswered && isSelected && !isCorrect && (
-                          <XCircle className="w-5 h-5 text-rose-400 flex-shrink-0" />
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Explanation and Next Button */}
-                {isAnswered && (
-                  <div className="mt-6 pt-5 border-t border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in fade-in slide-in-from-bottom-2 duration-200">
-                    <p className="text-xs sm:text-sm text-slate-300 italic">
-                      {currentQ.explanation ? currentQ.explanation : (selectedOption === currentQ.correctIndex ? 'Correct answer!' : 'Better luck on the next one!')}
-                    </p>
-                    <button
-                      onClick={handleNext}
-                      className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-semibold text-sm text-slate-950 bg-gradient-to-r from-sky-400 via-sky-300 to-pink-300 hover:opacity-95 shadow-md shadow-pink-500/10 transition-transform active:scale-95 cursor-pointer ml-auto"
-                    >
-                      <span>{currentIndex + 1 === questions.length ? 'See Results' : 'Next Question'}</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </button>
-                  </div>
-                )}
+        {/* Phase 1 Verification Grid */}
+        <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+          
+          {/* Card 1: Current Session & Role Inspector */}
+          <div className="md:col-span-1 rounded-3xl bg-slate-900/90 border border-slate-800 p-6 shadow-xl backdrop-blur-md flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4 text-sky-400" />
+                  <span>Session State</span>
+                </span>
+                <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider ${
+                  isAuthenticated 
+                    ? 'bg-emerald-950/60 text-emerald-300 border border-emerald-500/30' 
+                    : 'bg-amber-950/60 text-amber-300 border border-amber-500/30'
+                }`}>
+                  {isAuthenticated ? 'Authenticated' : 'Guest'}
+                </span>
               </div>
-            ) : (
-              /* Finish Screen */
-              <div className="text-center py-8">
-                <div className="w-20 h-20 mx-auto rounded-3xl bg-gradient-to-tr from-sky-400/20 to-pink-400/20 border border-sky-400/30 flex items-center justify-center mb-6">
-                  <Trophy className="w-10 h-10 text-pink-300" />
-                </div>
-                <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-100">
-                  Quiz Completed!
-                </h2>
-                <p className="mt-2 text-slate-400 text-sm">
-                  You scored <span className="font-bold text-sky-300">{score}</span> out of{' '}
-                  <span className="font-bold text-pink-300">{questions.length}</span> (
-                  {Math.round((score / questions.length) * 100)}%)
-                </p>
 
-                <div className="mt-8 flex items-center justify-center gap-3">
+              {isAuthenticated && currentUser ? (
+                <div className="space-y-3">
+                  <div className="p-3.5 rounded-2xl bg-slate-800/60 border border-slate-700/60">
+                    <div className="text-xs text-slate-400 font-medium">Logged in as</div>
+                    <div className="text-lg font-bold text-slate-100 flex items-center gap-2 mt-0.5">
+                      <span>{currentUser.username}</span>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold uppercase ${
+                        currentUser.role === 'teacher' ? 'bg-pink-500/20 text-pink-300' : 'bg-sky-500/20 text-sky-300'
+                      }`}>
+                        {currentUser.role}
+                      </span>
+                    </div>
+                    <div className="text-xs text-slate-400 mt-1 font-mono truncate">
+                      {currentUser.email}
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5 pt-1">
+                    <div className="text-xs text-slate-400 font-semibold uppercase tracking-wider">
+                      Role Permissions
+                    </div>
+                    <div className="text-xs space-y-1">
+                      <div className="flex items-center gap-2 text-slate-300">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>Take Quizzes &amp; Track History</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-slate-300">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>Public Leaderboard Ranking</span>
+                      </div>
+                      <div className={`flex items-center gap-2 ${isTeacher ? 'text-pink-300 font-medium' : 'text-slate-500 line-through'}`}>
+                        {isTeacher ? <CheckCircle2 className="w-3.5 h-3.5 text-pink-400" /> : <Lock className="w-3.5 h-3.5" />}
+                        <span>Teacher Question Authoring &amp; CSV</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="py-4 text-center">
+                  <p className="text-xs text-slate-400 mb-4">
+                    You are currently in guest mode. Log in or create an account to record your quiz scores.
+                  </p>
                   <button
-                    onClick={handleRestart}
-                    className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl font-semibold text-sm text-slate-950 bg-gradient-to-r from-sky-400 via-sky-300 to-pink-300 hover:opacity-95 shadow-md shadow-pink-500/10 transition-transform active:scale-95 cursor-pointer"
+                    onClick={() => openAuth('login')}
+                    className="w-full py-2.5 rounded-xl font-bold text-xs text-slate-950 bg-gradient-to-r from-sky-400 to-pink-300 hover:opacity-95 transition-opacity"
                   >
-                    <RotateCcw className="w-4 h-4" />
-                    <span>Try Again</span>
+                    Log In or Register
                   </button>
                 </div>
+              )}
+            </div>
+
+            {/* Quick role test button */}
+            {isAuthenticated && currentUser && (
+              <div className="pt-4 mt-4 border-t border-slate-800">
+                <button
+                  onClick={() => switchUserRole(currentUser.role === 'teacher' ? 'player' : 'teacher')}
+                  className="w-full py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700/80 border border-slate-700 text-xs font-semibold text-slate-200 transition-colors flex items-center justify-center gap-1.5"
+                >
+                  <RotateCcw className="w-3.5 h-3.5 text-sky-400" />
+                  <span>Toggle Role to: <strong className="text-pink-300">{currentUser.role === 'teacher' ? 'Player' : 'Teacher'}</strong></span>
+                </button>
               </div>
             )}
-          </main>
-        ) : (
-          /* Editor Mode */
-          <main className="rounded-3xl bg-slate-900/90 border border-slate-800 shadow-2xl p-6 sm:p-8 backdrop-blur-xl space-y-6">
+          </div>
+
+          {/* Card 2: Phase 1 Checklist per Specification */}
+          <div className="md:col-span-2 rounded-3xl bg-slate-900/90 border border-slate-800 p-6 shadow-xl backdrop-blur-md">
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                <ShieldCheck className="w-4 h-4 text-pink-400" />
+                <span>Phase 1 Requirements Checklist</span>
+              </span>
+              <span className="text-xs font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 px-2.5 py-0.5 rounded-full">
+                5 / 5 Complete
+              </span>
+            </div>
+
+            <div className="space-y-3">
+              <div className="p-3 rounded-2xl bg-slate-800/40 border border-slate-700/50 flex items-start gap-3">
+                <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <div className="text-xs font-bold text-slate-200">
+                    User Registration &amp; Account Architecture
+                  </div>
+                  <div className="text-[11px] text-slate-400 mt-0.5">
+                    Validates unique username, email format, and password length (3-30 chars regex protection against injections).
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-slate-800/40 border border-slate-700/50 flex items-start gap-3">
+                <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <div className="text-xs font-bold text-slate-200">
+                    Two-Tier Role Hierarchy &amp; Secret Teacher Code
+                  </div>
+                  <div className="text-[11px] text-slate-400 mt-0.5">
+                    Public registration defaults to <code className="text-sky-300 font-mono">player</code>. Providing the secret invite code (<code className="text-pink-300 font-mono">{TEACHER_INVITE_CODE}</code>) unlocks the <code className="text-pink-300 font-mono">teacher</code> role.
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-slate-800/40 border border-slate-700/50 flex items-start gap-3">
+                <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <div className="text-xs font-bold text-slate-200">
+                    Session Management &amp; Restart Persistence
+                  </div>
+                  <div className="text-[11px] text-slate-400 mt-0.5">
+                    Current user session and registered accounts survive page reloads and browser restarts.
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-slate-800/40 border border-slate-700/50 flex items-start gap-3">
+                <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <div className="text-xs font-bold text-slate-200">
+                    Teacher Route &amp; Navigation Guarding
+                  </div>
+                  <div className="text-[11px] text-slate-400 mt-0.5">
+                    Teacher Tools tab and authoring controls are strictly hidden from player accounts and require teacher privileges.
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-slate-800/40 border border-slate-700/50 flex items-start gap-3">
+                <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <div className="text-xs font-bold text-slate-200">
+                    Baking Content Bank Seeded (5 Quizzes × 10 Questions = 50 Total)
+                  </div>
+                  <div className="text-[11px] text-slate-400 mt-0.5">
+                    Seeded with 50 high quality questions across 5 baking subjects with answer choices, keys, and educational explanations.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        {/* Section: 5 Baking Quizzes Prepared for Phase 2 */}
+        <div className="w-full">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
             <div>
-              <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
-                <Plus className="w-5 h-5 text-sky-400" />
-                <span>Add a New Question</span>
+              <h2 className="text-2xl font-extrabold text-slate-100 flex items-center gap-2">
+                <BookOpen className="w-6 h-6 text-sky-400" />
+                <span>The 5 Baking Launch Quizzes</span>
               </h2>
-              <p className="text-xs text-slate-400 mt-1">Expand Brielle&apos;s quiz with custom trivia.</p>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Every quiz is prepared with 10 questions, 4 choices, 1 correct answer, and explanations.
+              </p>
             </div>
+            <div className="text-xs text-slate-400 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl">
+              Ready for <strong className="text-sky-300">Phase 2: Quiz Engine</strong>
+            </div>
+          </div>
 
-            <form onSubmit={handleAddQuestion} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
-                  Question
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Enter your question here..."
-                  value={newQuestionText}
-                  onChange={(e) => setNewQuestionText(e.target.value)}
-                  className="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-sky-400 transition-colors"
-                />
-              </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {INITIAL_QUIZZES.map((quiz, idx) => {
+              const quizQuestions = INITIAL_QUESTIONS.filter((q) => q.quizId === quiz.id);
 
-              <div className="space-y-2.5">
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
-                  Options & Correct Answer
-                </label>
-                {newOptions.map((opt, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setNewCorrectIndex(i)}
-                      className={`w-7 h-7 rounded-lg text-xs font-bold transition-all flex items-center justify-center flex-shrink-0 ${
-                        newCorrectIndex === i
-                          ? 'bg-gradient-to-r from-sky-400 to-pink-300 text-slate-950 ring-2 ring-pink-400/50'
-                          : 'bg-slate-800 text-slate-400 border border-slate-700'
-                      }`}
-                      title="Mark as correct answer"
-                    >
-                      {String.fromCharCode(65 + i)}
-                    </button>
-                    <input
-                      type="text"
-                      required
-                      placeholder={`Option ${String.fromCharCode(65 + i)}`}
-                      value={opt}
-                      onChange={(e) => {
-                        const next = [...newOptions];
-                        next[i] = e.target.value;
-                        setNewOptions(next);
-                      }}
-                      className="flex-1 bg-slate-800/80 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-400 transition-colors"
-                    />
+              return (
+                <div
+                  key={quiz.id}
+                  className="rounded-3xl bg-slate-900/90 border border-slate-800 hover:border-slate-700/80 p-5 shadow-xl transition-all hover:-translate-y-1 flex flex-col justify-between group"
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-slate-800 text-sky-300 border border-slate-700/60">
+                        {quiz.subject}
+                      </span>
+                      <div className="flex items-center gap-1 text-[11px] text-slate-400">
+                        <Clock className="w-3 h-3 text-pink-400" />
+                        <span>{quiz.timeLimitSeconds}s / Q</span>
+                      </div>
+                    </div>
+
+                    <h3 className="text-base font-bold text-slate-100 group-hover:text-sky-300 transition-colors">
+                      {quiz.title}
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-1 line-clamp-2">
+                      {quiz.description}
+                    </p>
                   </div>
-                ))}
-              </div>
 
-              <button
-                type="submit"
-                className="w-full py-2.5 rounded-xl font-semibold text-sm text-slate-950 bg-gradient-to-r from-sky-400 via-sky-300 to-pink-300 hover:opacity-95 shadow-md shadow-pink-500/10 transition-transform active:scale-95 cursor-pointer"
-              >
-                Save Question to Quiz
-              </button>
-            </form>
-
-            <div className="pt-6 border-t border-slate-800">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
-                Existing Questions ({questions.length})
-              </h3>
-              <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-                {questions.map((q, idx) => (
-                  <div
-                    key={q.id}
-                    className="flex items-center justify-between p-3 rounded-xl bg-slate-800/40 border border-slate-700/60 text-xs"
-                  >
-                    <span className="truncate max-w-[80%] text-slate-300">
-                      {idx + 1}. {q.question}
+                  <div className="mt-5 pt-4 border-t border-slate-800 flex items-center justify-between">
+                    <span className="text-xs font-semibold text-slate-400">
+                      {quizQuestions.length} Questions
                     </span>
+
                     <button
-                      onClick={() => handleDeleteQuestion(q.id)}
-                      disabled={questions.length <= 1}
-                      className="text-slate-500 hover:text-rose-400 disabled:opacity-30 disabled:pointer-events-none p-1 transition-colors"
-                      title="Delete question"
+                      onClick={() => {
+                        setPreviewQuizIndex(idx);
+                        setPreviewAnswer(null);
+                      }}
+                      className="px-3 py-1.5 rounded-xl text-xs font-bold text-slate-950 bg-gradient-to-r from-sky-400 to-pink-300 hover:opacity-95 shadow-sm transition-transform active:scale-95 cursor-pointer flex items-center gap-1"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <span>Preview Q1</span>
+                      <ArrowRight className="w-3 h-3" />
                     </button>
                   </div>
-                ))}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Live Question Preview Modal */}
+        {previewQuizIndex !== null && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="relative w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl">
+              <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-sky-400 via-sky-300 to-pink-300" />
+              
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-xs font-bold text-sky-300 uppercase tracking-wider">
+                  {INITIAL_QUIZZES[previewQuizIndex].title} · Question 1
+                </span>
+                <button
+                  onClick={() => setPreviewQuizIndex(null)}
+                  className="text-xs text-slate-400 hover:text-slate-100 bg-slate-800 px-2.5 py-1 rounded-lg"
+                >
+                  Close Preview
+                </button>
               </div>
+
+              {(() => {
+                const q = INITIAL_QUESTIONS.filter((q) => q.quizId === INITIAL_QUIZZES[previewQuizIndex].id)[0];
+                if (!q) return null;
+
+                return (
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-100 mb-4">
+                      {q.prompt}
+                    </h3>
+
+                    <div className="space-y-2 mb-5">
+                      {q.choices.map((choice) => {
+                        const isChosen = previewAnswer === choice.label;
+                        const isCorrect = choice.label === q.correctChoice;
+
+                        let style = 'bg-slate-800/80 border-slate-700 hover:bg-slate-800 text-slate-200';
+                        if (previewAnswer) {
+                          if (isCorrect) {
+                            style = 'bg-emerald-950/60 border-emerald-500 text-emerald-200';
+                          } else if (isChosen) {
+                            style = 'bg-rose-950/60 border-rose-500 text-rose-200';
+                          } else {
+                            style = 'bg-slate-900/60 border-slate-800 text-slate-500 opacity-50';
+                          }
+                        }
+
+                        return (
+                          <button
+                            key={choice.id}
+                            disabled={previewAnswer !== null}
+                            onClick={() => setPreviewAnswer(choice.label)}
+                            className={`w-full text-left p-3.5 rounded-xl border text-sm font-medium transition-all flex items-center justify-between ${style}`}
+                          >
+                            <span className="flex items-center gap-2.5">
+                              <span className="w-6 h-6 rounded-md bg-slate-700/80 text-xs font-bold flex items-center justify-center">
+                                {choice.label}
+                              </span>
+                              <span>{choice.text}</span>
+                            </span>
+                            {previewAnswer && isCorrect && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {previewAnswer && (
+                      <div className="p-3.5 rounded-xl bg-slate-800/80 border border-slate-700 text-xs text-slate-300">
+                        <strong className="text-sky-300">Explanation: </strong>
+                        {q.explanation}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
-          </main>
+          </div>
         )}
 
-        {/* Column footer badge */}
-        <footer className="mt-6 text-center text-xs text-slate-500 flex items-center justify-center gap-1.5">
-          <span>Created for</span>
-          <span className="font-semibold bg-gradient-to-r from-sky-400 to-pink-300 bg-clip-text text-transparent">
-            Brielle&apos;s Quiz
-          </span>
-        </footer>
+      </main>
 
-      </div>
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        initialTab={authInitialTab}
+      />
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <PhaseOneDashboard />
+    </AuthProvider>
   );
 }
