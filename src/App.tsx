@@ -181,7 +181,7 @@ function MainApp() {
               </div>
 
               <h1 className="text-4xl sm:text-5xl font-black tracking-tight bg-gradient-to-r from-sky-400 via-sky-300 to-pink-300 bg-clip-text text-transparent pb-1">
-                brielles quiz
+                EclairWiz
               </h1>
               <p className="mt-2 text-sm text-slate-400 max-w-md mx-auto">
                 Baking quiz engine featuring deterministic Hall of Fame leaderboards, teacher authoring, and validated CSV question uploads.

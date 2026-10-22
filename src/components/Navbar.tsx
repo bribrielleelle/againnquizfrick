@@ -53,7 +53,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onSelectTab, onOpenA
           </div>
           <div>
             <span className="text-xl sm:text-2xl font-black tracking-tight bg-gradient-to-r from-sky-400 via-sky-300 to-pink-300 bg-clip-text text-transparent">
-              brielles quiz
+              EclairWiz
             </span>
           </div>
         </div>

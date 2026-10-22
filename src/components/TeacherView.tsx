@@ -314,7 +314,7 @@ export const TeacherView: React.FC<TeacherViewProps> = ({
 
   // Download Standard CSV Template
   const handleDownloadTemplate = () => {
-    const csvContent = `# QuizWhiz / Brielle's Quiz CSV Import Template
+    const csvContent = `# EclairWiz CSV Import Template
 # Valid Quiz Titles: ${quizzes.map((q) => q.title).join(' | ')}
 quiz,difficulty,prompt,choiceA,choiceB,choiceC,choiceD,correct,explanation
 French Pastry & Viennoiserie,Easy,What French pastry is made with choux dough and pearl sugar?,Pâte sablée,Chouquettes,Brioche,Palmier,B,Chouquettes are bite-sized baked choux puffs sprinkled with pearl sugar.
