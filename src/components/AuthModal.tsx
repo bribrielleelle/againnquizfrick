@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { useAuth, TEACHER_INVITE_CODE } from '../context/AuthContext';
-import { X, Lock, Mail, User as UserIcon, Key, ShieldCheck, Sparkles, CheckCircle2 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { X, Lock, Mail, User as UserIcon, Sparkles, CheckCircle2, ArrowRight, Trash2 } from 'lucide-react';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -8,241 +8,213 @@ interface AuthModalProps {
   initialTab?: 'login' | 'register';
 }
 
-export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialTab = 'login' }) => {
-  const { login, register } = useAuth();
-  const [tab, setTab] = useState<'login' | 'register'>(initialTab);
+export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
+  const { loginOrRegister, usersList, currentUser, deleteSavedUser } = useAuth();
 
-  // Form states
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [inviteCode, setInviteCode] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [savedSuccess, setSavedSuccess] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-    setSuccessMsg(null);
+    if (!username.trim() || !email.trim()) return;
 
-    if (tab === 'login') {
-      const res = login(email || username, password);
-      if (res.success) {
+    const res = loginOrRegister(username, email, password);
+    if (res.success) {
+      setSavedSuccess(`Welcome, ${res.user.username}! Your profile (${res.user.email}) has been saved.`);
+      setTimeout(() => {
+        setSavedSuccess(null);
         onClose();
-      } else {
-        setError(res.error || 'Failed to login');
-      }
-    } else {
-      const res = register(username, email, password, inviteCode);
-      if (res.success) {
-        setSuccessMsg('Account created successfully! You are now logged in.');
-        setTimeout(() => {
-          onClose();
-        }, 800);
-      } else {
-        setError(res.error || 'Registration failed');
-      }
+      }, 700);
     }
   };
 
-  const handleQuickLogin = (role: 'teacher' | 'player') => {
-    if (role === 'teacher') {
-      login('brielle@baking.quiz', 'baker123');
-    } else {
-      login('pupil@baking.quiz', 'cookie123');
-    }
+  const handleSelectSavedUser = (savedUser: { username: string; email: string }) => {
+    loginOrRegister(savedUser.username, savedUser.email, 'saved-password');
     onClose();
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="relative w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl overflow-hidden">
-        {/* Top subtle sky-to-pink gradient line */}
+        {/* Top sky blue fading ombre into light pink bar */}
         <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-sky-400 via-sky-300 to-pink-300" />
 
-        {/* Close button */}
+        {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-5 right-5 p-1.5 rounded-xl text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition-colors"
+          className="absolute top-5 right-5 p-1.5 rounded-xl text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition-colors cursor-pointer"
         >
           <X className="w-5 h-5" />
         </button>
 
-        {/* Modal Header */}
+        {/* Header */}
         <div className="text-center mb-6">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-slate-800 text-sky-300 border border-slate-700 mb-2">
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Brielle&apos;s Quiz Hub</span>
+            <Sparkles className="w-3.5 h-3.5 text-pink-300" />
+            <span>Player Sign-In</span>
           </div>
-          <h2 className="text-2xl font-extrabold text-slate-100">
-            {tab === 'login' ? 'Welcome Back!' : 'Create an Account'}
+          <h2 className="text-2xl font-extrabold text-slate-100 tracking-tight">
+            Log In or Sign Up
           </h2>
-          <p className="text-xs text-slate-400 mt-1">
-            {tab === 'login'
-              ? 'Sign in to record your quiz attempts and rank on leaderboards.'
-              : 'Join as a player or enter an invite code to access teacher tools.'}
+          <p className="text-xs text-slate-400 mt-1 max-w-xs mx-auto">
+            Enter your name, email, and any password you desire. Your player profile and score history are automatically saved!
           </p>
         </div>
 
-        {/* Tab switch */}
-        <div className="flex bg-slate-800/80 p-1 rounded-2xl mb-6 border border-slate-700/60">
-          <button
-            type="button"
-            onClick={() => {
-              setTab('login');
-              setError(null);
-            }}
-            className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${
-              tab === 'login'
-                ? 'bg-gradient-to-r from-sky-400 to-pink-300 text-slate-950 shadow-sm'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            Log In
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setTab('register');
-              setError(null);
-            }}
-            className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${
-              tab === 'register'
-                ? 'bg-gradient-to-r from-sky-400 to-pink-300 text-slate-950 shadow-sm'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            Register
-          </button>
-        </div>
-
-        {error && (
-          <div className="mb-4 p-3 rounded-xl bg-rose-950/50 border border-rose-500/40 text-rose-300 text-xs">
-            {error}
-          </div>
-        )}
-
-        {successMsg && (
-          <div className="mb-4 p-3 rounded-xl bg-emerald-950/50 border border-emerald-500/40 text-emerald-300 text-xs flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
-            <span>{successMsg}</span>
+        {savedSuccess && (
+          <div className="mb-4 p-3 rounded-xl bg-emerald-950/60 border border-emerald-500/50 text-emerald-300 text-xs flex items-center gap-2 animate-in fade-in">
+            <CheckCircle2 className="w-4 h-4 flex-shrink-0 text-emerald-400" />
+            <span>{savedSuccess}</span>
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {tab === 'register' && (
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
-                Username
-              </label>
-              <div className="relative">
-                <UserIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. MasterBaker"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-800/80 border border-slate-700 rounded-xl text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-sky-400 transition-colors"
-                />
-              </div>
-            </div>
-          )}
-
+          {/* Username / Player Name (Required) */}
           <div>
-            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
-              {tab === 'login' ? 'Username or Email' : 'Email Address'}
+            <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+              <span>Your Name or Username</span>
+              <span className="text-[10px] text-pink-400 font-semibold">*Required</span>
             </label>
             <div className="relative">
-              <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-              <input
-                type={tab === 'register' ? 'email' : 'text'}
-                required
-                placeholder={tab === 'login' ? 'e.g. brielle@baking.quiz' : 'yourname@example.com'}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-800/80 border border-slate-700 rounded-xl text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-sky-400 transition-colors"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
-              Password
-            </label>
-            <div className="relative">
-              <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-              <input
-                type="password"
-                required
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-800/80 border border-slate-700 rounded-xl text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-sky-400 transition-colors"
-              />
-            </div>
-          </div>
-
-          {tab === 'register' && (
-            <div className="pt-1">
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                  <Key className="w-3.5 h-3.5 text-pink-400" />
-                  <span>Teacher Invite Code (Optional)</span>
-                </label>
-              </div>
+              <UserIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-sky-400" />
               <input
                 type="text"
-                placeholder="Enter secret code for teacher role"
-                value={inviteCode}
-                onChange={(e) => setInviteCode(e.target.value)}
-                className="w-full px-4 py-2 bg-slate-800/80 border border-slate-700 rounded-xl text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-pink-400 transition-colors uppercase tracking-widest font-mono"
+                required
+                placeholder="e.g. Brielle or PastryPro"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 bg-slate-800/90 border border-slate-700 rounded-xl text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-sky-400 transition-colors"
+                autoFocus
               />
-              <p className="text-[11px] text-slate-400 mt-1 flex items-center gap-1">
-                <ShieldCheck className="w-3.5 h-3.5 text-sky-400 flex-shrink-0" />
-                <span>Tip: Use code <strong className="text-pink-300 font-mono">{TEACHER_INVITE_CODE}</strong> for teacher access.</span>
-              </p>
             </div>
-          )}
+          </div>
 
+          {/* Email Address (Required) */}
+          <div>
+            <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+              <span>Email Address</span>
+              <span className="text-[10px] text-pink-400 font-semibold">*Required</span>
+            </label>
+            <div className="relative">
+              <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-sky-400" />
+              <input
+                type="email"
+                required
+                placeholder="e.g. brielle@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 bg-slate-800/90 border border-slate-700 rounded-xl text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-sky-400 transition-colors"
+              />
+            </div>
+          </div>
+
+          {/* Any Password they desire (Required) */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">
+                Password
+              </label>
+              <span className="text-[10px] text-pink-300 font-medium">
+                (Any password you desire)
+              </span>
+            </div>
+            <div className="relative">
+              <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-pink-400" />
+              <input
+                type="text"
+                required
+                placeholder="Enter any password (e.g. 123, cake, baker)"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 bg-slate-800/90 border border-slate-700 rounded-xl text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-pink-400 transition-colors"
+              />
+            </div>
+            <div className="flex items-center justify-between text-[11px] text-slate-400 mt-1.5 px-0.5">
+              <span>Players: Use any password</span>
+              <span className="text-[10px] text-pink-300 bg-pink-950/40 border border-pink-500/30 px-1.5 py-0.5 rounded-md font-mono">
+                Teacher password: baker123
+              </span>
+            </div>
+          </div>
+
+          {/* Submit Button */}
           <button
             type="submit"
-            className="w-full mt-2 py-3 rounded-xl font-bold text-sm text-slate-950 bg-gradient-to-r from-sky-400 via-sky-300 to-pink-300 hover:opacity-95 shadow-md shadow-pink-500/10 transition-transform active:scale-95 cursor-pointer"
+            className="w-full mt-2 py-3 rounded-2xl font-bold text-sm text-slate-950 bg-gradient-to-r from-sky-400 via-sky-300 to-pink-300 hover:opacity-95 shadow-md shadow-pink-500/10 transition-transform active:scale-95 cursor-pointer flex items-center justify-center gap-2"
           >
-            {tab === 'login' ? 'Sign In to Quiz' : 'Create Free Account'}
+            <span>Log In &amp; Save Player</span>
+            <ArrowRight className="w-4 h-4" />
           </button>
         </form>
 
-        {/* Quick 1-click test logins */}
-        <div className="mt-6 pt-5 border-t border-slate-800">
-          <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider text-center mb-2.5">
-            Quick 1-Click Demo Accounts
-          </p>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => handleQuickLogin('teacher')}
-              className="px-3 py-2 rounded-xl bg-slate-800/70 border border-slate-700/80 hover:bg-slate-800 hover:border-pink-400/40 text-left transition-colors group"
-            >
-              <div className="text-xs font-bold text-pink-300 group-hover:text-pink-200">
-                ChefBrielle
-              </div>
-              <div className="text-[10px] text-slate-400">Teacher Role</div>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickLogin('player')}
-              className="px-3 py-2 rounded-xl bg-slate-800/70 border border-slate-700/80 hover:bg-slate-800 hover:border-sky-400/40 text-left transition-colors group"
-            >
-              <div className="text-xs font-bold text-sky-300 group-hover:text-sky-200">
-                PastryPupil
-              </div>
-              <div className="text-[10px] text-slate-400">Player Role</div>
-            </button>
+        {/* Saved Players on this Device */}
+        {usersList.length > 0 && (
+          <div className="mt-6 pt-5 border-t border-slate-800">
+            <div className="flex items-center justify-between mb-2.5">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                Saved Players on this Device ({usersList.length})
+              </span>
+              <span className="text-[10px] text-sky-400">1-Tap Switch</span>
+            </div>
+
+            <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+              {usersList.map((u) => {
+                const isCurrent = currentUser?.id === u.id;
+
+                return (
+                  <div
+                    key={u.id}
+                    className={`flex items-center justify-between p-2.5 rounded-xl border text-xs transition-colors ${
+                      isCurrent
+                        ? 'bg-slate-800 border-sky-400/50 text-slate-100'
+                        : 'bg-slate-800/40 border-slate-700/60 hover:bg-slate-800 hover:border-slate-600 text-slate-300'
+                    }`}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => handleSelectSavedUser(u)}
+                      className="flex items-center gap-2 text-left flex-1 cursor-pointer truncate"
+                    >
+                      <div className="w-6 h-6 rounded-lg bg-slate-700 flex items-center justify-center font-bold text-[11px] text-pink-300 flex-shrink-0">
+                        {u.username.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="truncate">
+                        <div className="font-bold flex items-center gap-1.5 truncate">
+                          <span className="truncate">{u.username}</span>
+                          {isCurrent && (
+                            <span className="text-[9px] px-1.5 py-0.2 rounded bg-sky-500/20 text-sky-300 font-semibold flex-shrink-0">
+                              Active
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[10px] text-slate-400 font-mono truncate">
+                          {u.email}
+                        </div>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteSavedUser(u.id);
+                      }}
+                      className="p-1 text-slate-500 hover:text-rose-400 transition-colors ml-2 flex-shrink-0"
+                      title="Remove saved profile"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        </div>
+        )}
+
       </div>
     </div>
   );

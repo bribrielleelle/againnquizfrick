@@ -2,27 +2,39 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, Role } from '../types';
 
 export const TEACHER_INVITE_CODE = 'BAKER2026';
+// Recognized passwords that grant teacher access
+export const TEACHER_PASSWORDS = ['baker123', 'BAKER2026', 'teacher123'];
 
 interface AuthContextType {
   currentUser: User | null;
   isAuthenticated: boolean;
   isTeacher: boolean;
+  loginOrRegister: (username: string, email: string, password?: string) => { success: boolean; user: User };
+  login: (identity: string, password?: string) => { success: boolean; error?: string };
   register: (username: string, email: string, password: string, inviteCode?: string) => { success: boolean; error?: string };
-  login: (identity: string, password: string) => { success: boolean; error?: string };
   logout: () => void;
   switchUserRole: (role: Role) => void;
   usersList: User[];
+  deleteSavedUser: (userId: string) => void;
 }
 
 const STORAGE_KEY_USER = 'brielle_quiz_current_user';
 const STORAGE_KEY_ALL_USERS = 'brielle_quiz_registered_users';
 
-// Pre-seeded accounts matching spec
+// Initial default accounts
 const DEFAULT_USERS: (User & { passwordHash: string })[] = [
+  {
+    id: 'u-brielle',
+    username: 'Brielle',
+    email: 'brielle@baking.quiz',
+    role: 'player',
+    createdAt: new Date().toISOString(),
+    passwordHash: 'any',
+  },
   {
     id: 'u-teacher-1',
     username: 'ChefBrielle',
-    email: 'brielle@baking.quiz',
+    email: 'chef@baking.quiz',
     role: 'teacher',
     createdAt: new Date().toISOString(),
     passwordHash: 'baker123',
@@ -52,12 +64,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_USER);
-      return saved ? JSON.parse(saved) : DEFAULT_USERS[0]; // Default logged in as ChefBrielle for convenience
+      return saved ? JSON.parse(saved) : DEFAULT_USERS[0];
     } catch {
       return DEFAULT_USERS[0];
     }
   });
 
+  // Save current user anytime it changes
   useEffect(() => {
     try {
       if (currentUser) {
@@ -70,6 +83,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [currentUser]);
 
+  // Save all registered/logged-in users anytime the list changes
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY_ALL_USERS, JSON.stringify(users));
@@ -78,80 +92,77 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [users]);
 
-  const register = (username: string, email: string, password: string, inviteCode?: string) => {
-    const cleanUsername = username.trim();
-    const cleanEmail = email.trim().toLowerCase();
+  // Main login/sign up method:
+  // When signing in as a teacher, teachers have access by the password (e.g. baker123, BAKER2026, teacher123)
+  const loginOrRegister = (usernameInput: string, emailInput: string, passwordInput: string = '') => {
+    const cleanUsername = usernameInput.trim() || 'Player';
+    const cleanEmail = emailInput.trim().toLowerCase();
+    const cleanPassword = passwordInput.trim() || 'saved-password';
 
-    // Validation per spec
-    if (!/^[A-Za-z0-9_-]{3,30}$/.test(cleanUsername)) {
-      return {
-        success: false,
-        error: 'Username must be 3-30 characters (letters, numbers, underscores, and dashes only).',
+    // Teacher access by password
+    const grantsTeacherRole = TEACHER_PASSWORDS.some(
+      (tp) => tp.toLowerCase() === cleanPassword.toLowerCase()
+    );
+
+    // Check if user with this username or email already exists
+    const existingIndex = users.findIndex(
+      (u) =>
+        u.email.toLowerCase() === cleanEmail ||
+        u.username.toLowerCase() === cleanUsername.toLowerCase()
+    );
+
+    let loggedInUser: User;
+
+    if (existingIndex >= 0) {
+      // Existing user: update their details, granting teacher role if teacher password is used
+      const existing = users[existingIndex];
+      const updatedUser: User & { passwordHash: string } = {
+        ...existing,
+        username: cleanUsername,
+        email: cleanEmail,
+        passwordHash: cleanPassword,
+        role: grantsTeacherRole ? 'teacher' : existing.role,
       };
-    }
 
-    if (!cleanEmail.includes('@') || cleanEmail.length < 5) {
-      return { success: false, error: 'Please enter a valid email address.' };
-    }
+      const updatedList = [...users];
+      updatedList[existingIndex] = updatedUser;
+      setUsers(updatedList);
 
-    if (!password || password.length < 6) {
-      return { success: false, error: 'Password must be at least 6 characters.' };
-    }
-
-    // Check unique username and email
-    if (users.some((u) => u.username.toLowerCase() === cleanUsername.toLowerCase())) {
-      return { success: false, error: 'Username is already taken. Please choose another.' };
-    }
-
-    if (users.some((u) => u.email.toLowerCase() === cleanEmail)) {
-      return { success: false, error: 'An account with this email already exists.' };
-    }
-
-    // Role assignment: Teacher if invite code matches, otherwise Player
-    let assignedRole: Role = 'player';
-    if (inviteCode && inviteCode.trim().toUpperCase() === TEACHER_INVITE_CODE) {
-      assignedRole = 'teacher';
-    } else if (inviteCode && inviteCode.trim().length > 0) {
-      return {
-        success: false,
-        error: 'Invalid Teacher Invite Code. Leave blank to register as a Player or enter a valid code.',
+      const { passwordHash: _, ...safeUser } = updatedUser;
+      loggedInUser = safeUser;
+    } else {
+      // Brand new user: role is teacher if using teacher password, otherwise player
+      const newUser: User & { passwordHash: string } = {
+        id: `u-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        username: cleanUsername,
+        email: cleanEmail,
+        role: grantsTeacherRole ? 'teacher' : 'player',
+        createdAt: new Date().toISOString(),
+        passwordHash: cleanPassword,
       };
+
+      setUsers((prev) => [newUser, ...prev]);
+
+      const { passwordHash: _, ...safeUser } = newUser;
+      loggedInUser = safeUser;
     }
 
-    const newUser: User & { passwordHash: string } = {
-      id: `u-${Date.now()}`,
-      username: cleanUsername,
-      email: cleanEmail,
-      role: assignedRole,
-      createdAt: new Date().toISOString(),
-      passwordHash: password, // In production backed by bcryptjs
-    };
+    setCurrentUser(loggedInUser);
+    return { success: true, user: loggedInUser };
+  };
 
-    setUsers((prev) => [...prev, newUser]);
-
-    // Strip passwordHash before setting user in session
-    const { passwordHash: _, ...publicUser } = newUser;
-    setCurrentUser(publicUser);
-
+  const login = (identity: string, password: string = '') => {
+    const defaultEmail = identity.includes('@') ? identity : `${identity.toLowerCase()}@baking.quiz`;
+    const defaultUser = identity.includes('@') ? identity.split('@')[0] : identity;
+    const res = loginOrRegister(defaultUser, defaultEmail, password);
     return { success: true };
   };
 
-  const login = (identity: string, password: string) => {
-    const cleanIdentity = identity.trim().toLowerCase();
-    const cleanPassword = password.trim();
-
-    const user = users.find(
-      (u) =>
-        (u.email.toLowerCase() === cleanIdentity || u.username.toLowerCase() === cleanIdentity) &&
-        u.passwordHash === cleanPassword
-    );
-
-    if (!user) {
-      return { success: false, error: 'Invalid username/email or password.' };
+  const register = (username: string, email: string, password: string, inviteCode?: string) => {
+    const res = loginOrRegister(username, email, password);
+    if (inviteCode && inviteCode.trim().toUpperCase() === TEACHER_INVITE_CODE) {
+      switchUserRole('teacher');
     }
-
-    const { passwordHash: _, ...publicUser } = user;
-    setCurrentUser(publicUser);
     return { success: true };
   };
 
@@ -168,6 +179,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
   };
 
+  const deleteSavedUser = (userId: string) => {
+    setUsers((prev) => prev.filter((u) => u.id !== userId));
+    if (currentUser?.id === userId) {
+      setCurrentUser(null);
+    }
+  };
+
   const isTeacher = currentUser?.role === 'teacher';
   const isAuthenticated = currentUser !== null;
 
@@ -177,11 +195,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         currentUser,
         isAuthenticated,
         isTeacher,
-        register,
+        loginOrRegister,
         login,
+        register,
         logout,
         switchUserRole,
         usersList: users.map(({ passwordHash: _, ...safe }) => safe),
+        deleteSavedUser,
       }}
     >
       {children}
