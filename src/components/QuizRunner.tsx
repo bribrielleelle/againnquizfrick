@@ -16,7 +16,9 @@ import {
   Award,
   HelpCircle,
   Clock,
-  AlertTriangle
+  AlertTriangle,
+  Timer,
+  Play
 } from 'lucide-react';
 
 interface QuizRunnerProps {
@@ -29,7 +31,7 @@ interface QuizRunnerProps {
     score: number;
     questionCount: number;
     percentage: number;
-    answers: { questionId: string; selectedChoice: 'A' | 'B' | 'C' | 'D' | null; isCorrect: boolean }[];
+    answers: { questionId: string; selectedChoice: 'A' | 'B' | 'C' | 'D' | null; isCorrect: boolean; timedOut?: boolean }[];
   }) => void;
   onExit: () => void;
 }
@@ -47,13 +49,59 @@ export const QuizRunner: React.FC<QuizRunnerProps> = ({
   const [isAnswered, setIsAnswered] = useState<boolean>(false);
   const [score, setScore] = useState<number>(0);
   const [userAnswers, setUserAnswers] = useState<
-    { questionId: string; selectedChoice: 'A' | 'B' | 'C' | 'D' | null; isCorrect: boolean }[]
+    { questionId: string; selectedChoice: 'A' | 'B' | 'C' | 'D' | null; isCorrect: boolean; timedOut?: boolean }[]
   >([]);
   const [isFinished, setIsFinished] = useState<boolean>(false);
   const [showFullReview, setShowFullReview] = useState<boolean>(false);
   const [showExitConfirm, setShowExitConfirm] = useState<boolean>(false);
 
+  // Feature 1: Timed Mode State (default active per quiz time limit)
+  const timeLimit = quiz.timeLimitSeconds || 30;
+  const [isTimedMode, setIsTimedMode] = useState<boolean>(true);
+  const [timeLeft, setTimeLeft] = useState<number>(timeLimit);
+  const [hasTimedOut, setHasTimedOut] = useState<boolean>(false);
+
   const currentQ = questions[currentIndex];
+
+  // Reset timer on question change
+  useEffect(() => {
+    setTimeLeft(timeLimit);
+    setHasTimedOut(false);
+  }, [currentIndex, timeLimit]);
+
+  // Countdown timer effect
+  useEffect(() => {
+    if (!isTimedMode || isAnswered || isFinished || showExitConfirm) return;
+
+    if (timeLeft <= 0) {
+      handleTimeout();
+      return;
+    }
+
+    const interval = setInterval(() => {
+      setTimeLeft((prev) => prev - 1);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [timeLeft, isTimedMode, isAnswered, isFinished, showExitConfirm]);
+
+  // Handle Timeout (D10 & D14: question locks, scored incorrect, correct answer + explanation reveal)
+  const handleTimeout = () => {
+    if (isAnswered) return;
+
+    setHasTimedOut(true);
+    setIsAnswered(true);
+    setSelectedChoice(null);
+
+    const timeoutRecord = {
+      questionId: currentQ.id,
+      selectedChoice: null,
+      isCorrect: false,
+      timedOut: true,
+    };
+
+    setUserAnswers((prev) => [...prev, timeoutRecord]);
+  };
 
   // Keyboard shortcut listener
   useEffect(() => {
@@ -99,6 +147,7 @@ export const QuizRunner: React.FC<QuizRunnerProps> = ({
       questionId: currentQ.id,
       selectedChoice: choiceLabel,
       isCorrect,
+      timedOut: false,
     };
 
     setUserAnswers((prev) => [...prev, answerRecord]);
@@ -109,6 +158,7 @@ export const QuizRunner: React.FC<QuizRunnerProps> = ({
       setCurrentIndex((prev) => prev + 1);
       setSelectedChoice(null);
       setIsAnswered(false);
+      setHasTimedOut(false);
     } else {
       const finalScore = userAnswers.reduce((acc, ans) => acc + (ans.isCorrect ? 1 : 0), 0) + (selectedChoice === currentQ.correctChoice ? 1 : 0);
       const percentage = Math.round((finalScore / questions.length) * 100);
@@ -134,11 +184,11 @@ export const QuizRunner: React.FC<QuizRunnerProps> = ({
     setIsFinished(false);
     setShowFullReview(false);
     setShowExitConfirm(false);
+    setHasTimedOut(false);
+    setTimeLeft(timeLimit);
   };
 
   const percentage = Math.round((score / questions.length) * 100);
-
-  // Check personal best status (Phase 3 spec)
   const isNewPersonalBest = previousBestScore !== null && score > previousBestScore;
   const isFirstAttempt = previousBestScore === null;
   const isTiedPersonalBest = previousBestScore !== null && score === previousBestScore && score > 0;
@@ -168,7 +218,7 @@ export const QuizRunner: React.FC<QuizRunnerProps> = ({
             <Trophy className="w-10 h-10 text-pink-300 animate-bounce" />
           </div>
 
-          {/* Personal Best Badge (Phase 3 Feature) */}
+          {/* Personal Best Badge */}
           {isNewPersonalBest && (
             <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-gradient-to-r from-amber-400/20 to-pink-400/20 border border-amber-400/40 text-amber-300 shadow-md mb-3">
               <Sparkles className="w-4 h-4 text-amber-400 animate-spin" />
@@ -244,7 +294,7 @@ export const QuizRunner: React.FC<QuizRunnerProps> = ({
             </button>
           </div>
 
-          {/* Full Question Breakdown Review */}
+          {/* Full Question Breakdown Review (Feature 2) */}
           {showFullReview && (
             <div className="mt-10 pt-8 border-t border-slate-800 text-left space-y-5 animate-in fade-in duration-200">
               <h3 className="text-lg font-extrabold text-slate-100 flex items-center gap-2">
@@ -257,6 +307,7 @@ export const QuizRunner: React.FC<QuizRunnerProps> = ({
                   const record = userAnswers.find((a) => a.questionId === q.id);
                   const userChoice = record?.selectedChoice;
                   const isCorrect = record?.isCorrect;
+                  const wasTimeout = record?.timedOut;
 
                   return (
                     <div
@@ -275,10 +326,12 @@ export const QuizRunner: React.FC<QuizRunnerProps> = ({
                           className={`text-xs font-bold px-2 py-0.5 rounded-md ${
                             isCorrect
                               ? 'bg-emerald-500/20 text-emerald-300'
+                              : wasTimeout
+                              ? 'bg-amber-500/20 text-amber-300'
                               : 'bg-rose-500/20 text-rose-300'
                           }`}
                         >
-                          {isCorrect ? 'CORRECT!' : 'MISSED'}
+                          {isCorrect ? 'CORRECT!' : wasTimeout ? 'TIMED OUT' : 'MISSED'}
                         </span>
                       </div>
 
@@ -331,14 +384,17 @@ export const QuizRunner: React.FC<QuizRunnerProps> = ({
     );
   }
 
-  // Active Quiz In-Progress Screen
+  // Active Quiz In-Progress Screen (With Feature 1 Timed Mode Countdown & Timeout Handling)
+  const timerPercentage = Math.max(0, (timeLeft / timeLimit) * 100);
+  const isUrgent = timeLeft <= 5 && !isAnswered;
+
   return (
     <div className="w-full max-w-2xl mx-auto animate-in fade-in duration-200">
       <div className="rounded-3xl bg-slate-900/95 border border-slate-800 p-6 sm:p-10 shadow-2xl backdrop-blur-xl relative overflow-hidden">
         <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-sky-400 via-sky-300 to-pink-300" />
 
         {/* Top Header Bar */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-4">
           <button
             onClick={() => setShowExitConfirm(true)}
             className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-rose-300 transition-colors cursor-pointer"
@@ -351,12 +407,57 @@ export const QuizRunner: React.FC<QuizRunnerProps> = ({
             <span className="text-xs font-bold text-slate-400 bg-slate-800/80 px-3 py-1 rounded-full border border-slate-700/60">
               {quiz.title}
             </span>
+
+            {/* Timed Mode Toggle */}
+            <button
+              onClick={() => setIsTimedMode(!isTimedMode)}
+              className={`text-[10px] font-bold px-2 py-0.5 rounded-full border transition-colors cursor-pointer flex items-center gap-1 ${
+                isTimedMode
+                  ? 'bg-pink-950/50 text-pink-300 border-pink-500/40'
+                  : 'bg-slate-800 text-slate-400 border-slate-700'
+              }`}
+              title="Toggle Timed Mode on/off"
+            >
+              <Clock className="w-3 h-3" />
+              <span>{isTimedMode ? 'Timed: On' : 'Untimed'}</span>
+            </button>
           </div>
 
           <div className="text-xs font-bold text-sky-300 font-mono">
             Score: {score}
           </div>
         </div>
+
+        {/* Feature 1: Timed Mode Countdown Bar & Seconds Counter */}
+        {isTimedMode && (
+          <div className="mb-6 p-3 rounded-2xl bg-slate-800/40 border border-slate-700/60">
+            <div className="flex items-center justify-between text-xs font-mono font-bold mb-1.5">
+              <span className="flex items-center gap-1.5 text-slate-400">
+                <Timer className={`w-3.5 h-3.5 ${isUrgent ? 'text-rose-400 animate-spin' : 'text-sky-400'}`} />
+                <span>Time Remaining</span>
+              </span>
+              <span
+                role="timer"
+                aria-live="polite"
+                className={`text-sm ${
+                  isUrgent ? 'text-rose-400 animate-pulse font-black' : 'text-sky-300'
+                }`}
+              >
+                {timeLeft}s
+              </span>
+            </div>
+            <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden p-0.5 border border-slate-700/40">
+              <div
+                className={`h-full rounded-full transition-all duration-1000 ${
+                  isUrgent
+                    ? 'bg-rose-500 animate-pulse'
+                    : 'bg-gradient-to-r from-sky-400 via-sky-300 to-pink-300'
+                }`}
+                style={{ width: `${timerPercentage}%` }}
+              />
+            </div>
+          </div>
+        )}
 
         {/* Abandon Quiz Confirmation Modal (Enforcing D7) */}
         {showExitConfirm && (
@@ -372,13 +473,13 @@ export const QuizRunner: React.FC<QuizRunnerProps> = ({
               <div className="flex gap-2.5">
                 <button
                   onClick={() => setShowExitConfirm(false)}
-                  className="flex-1 py-2.5 rounded-xl font-bold text-xs bg-slate-800 hover:bg-slate-700 text-slate-200"
+                  className="flex-1 py-2.5 rounded-xl font-bold text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 cursor-pointer"
                 >
                   Keep Playing
                 </button>
                 <button
                   onClick={onExit}
-                  className="flex-1 py-2.5 rounded-xl font-bold text-xs bg-rose-600 hover:bg-rose-500 text-white"
+                  className="flex-1 py-2.5 rounded-xl font-bold text-xs bg-rose-600 hover:bg-rose-500 text-white cursor-pointer"
                 >
                   Discard &amp; Exit
                 </button>
@@ -387,7 +488,7 @@ export const QuizRunner: React.FC<QuizRunnerProps> = ({
           </div>
         )}
 
-        {/* Progress Bar with sky blue to pink ombre */}
+        {/* Question Progress Bar */}
         <div className="mb-8">
           <div className="flex justify-between items-center text-xs font-bold text-slate-400 mb-2">
             <span>
@@ -405,6 +506,16 @@ export const QuizRunner: React.FC<QuizRunnerProps> = ({
             />
           </div>
         </div>
+
+        {/* Timeout Alert Flash (D14) */}
+        {hasTimedOut && (
+          <div className="mb-4 p-3 rounded-2xl bg-rose-950/70 border border-rose-500/60 text-rose-200 text-xs font-bold flex items-center justify-between animate-in zoom-in-95 duration-150">
+            <div className="flex items-center gap-2">
+              <Clock className="w-4 h-4 text-rose-400 animate-spin" />
+              <span>TIME&apos;S UP! Scored as incorrect. Correct answer revealed below.</span>
+            </div>
+          </div>
+        )}
 
         {/* Question Prompt */}
         <div className="mb-6">
@@ -469,11 +580,16 @@ export const QuizRunner: React.FC<QuizRunnerProps> = ({
           })}
         </div>
 
-        {/* Instant Answer Feedback & Explanation */}
+        {/* Feature 2: Instant Educational Explanation Reveal after every question */}
         {isAnswered && (
           <div className="mt-6 pt-5 border-t border-slate-800 animate-in fade-in slide-in-from-bottom-2 duration-200">
             <div className="flex items-center gap-2 mb-2">
-              {selectedChoice === currentQ.correctChoice ? (
+              {hasTimedOut ? (
+                <span className="text-xs font-black uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                  <Clock className="w-4 h-4" />
+                  <span>Timed Out — Correct Choice is ({currentQ.correctChoice})</span>
+                </span>
+              ) : selectedChoice === currentQ.correctChoice ? (
                 <span className="text-xs font-black uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
                   <CheckCircle2 className="w-4 h-4" />
                   <span>Correct Answer!</span>
