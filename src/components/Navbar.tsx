@@ -171,13 +171,13 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onSelectTab, onOpenA
                     {/* Switch Account */}
                     <button
                       onClick={() => {
-                        onOpenAuth('login');
+                        logout();
                         setIsOptionsOpen(false);
                       }}
-                      className="w-full text-left px-3 py-2 rounded-xl hover:bg-pink-50 border border-transparent hover:border-pink-200 flex items-center gap-2 text-neutral-800 transition-colors cursor-pointer"
+                      className="w-full text-left px-3 py-2 rounded-xl hover:bg-pink-50 border border-transparent hover:border-pink-200 flex items-center gap-2 text-neutral-800 transition-colors cursor-pointer font-bold"
                     >
                       <Users className="w-3.5 h-3.5 text-pink-600" />
-                      <span>Switch Baker Account</span>
+                      <span>Switch Baker (Go to Login Page)</span>
                     </button>
 
                     {/* Teacher Access Password Note */}

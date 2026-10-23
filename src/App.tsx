@@ -7,7 +7,10 @@ import { HistoryView } from './components/HistoryView';
 import { LeaderboardView } from './components/LeaderboardView';
 import { TeacherView } from './components/TeacherView';
 import { QASuiteModal } from './components/QASuiteModal';
+import { LoginPage } from './components/LoginPage';
+import { CutePageLoader } from './components/CutePageLoader';
 import { INITIAL_QUIZZES, INITIAL_QUESTIONS } from './data/bakingQuizzes';
+import { INITIAL_ATTEMPTS } from './data/initialAttempts';
 import { Quiz, Question, Attempt } from './types';
 import { 
   Sparkles, 
@@ -39,6 +42,7 @@ function MainApp() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authInitialTab, setAuthInitialTab] = useState<'login' | 'register'>('login');
   const [isQAModalOpen, setIsQAModalOpen] = useState(false);
+  const [isGuestBypass, setIsGuestBypass] = useState(false);
 
   // Quizzes & Questions state (persisted in localStorage, editable by teachers)
   const [quizzes, setQuizzes] = useState<Quiz[]>(() => {
@@ -59,13 +63,19 @@ function MainApp() {
     }
   });
 
-  // Completed attempts store
+  // Completed attempts store (persists across all users and page reloads)
   const [completedAttempts, setCompletedAttempts] = useState<Attempt[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_ATTEMPTS);
-      return saved ? JSON.parse(saved) : [];
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+      return INITIAL_ATTEMPTS;
     } catch {
-      return [];
+      return INITIAL_ATTEMPTS;
     }
   });
 
@@ -93,13 +103,64 @@ function MainApp() {
     }
   }, [completedAttempts]);
 
+  const [pageLoading, setPageLoading] = useState<{
+    active: boolean;
+    title?: string;
+    icon?: string;
+  }>({ active: false });
+
+  const triggerTransition = (title: string, icon: string, callback: () => void) => {
+    setPageLoading({ active: true, title, icon });
+    setTimeout(() => {
+      callback();
+      setTimeout(() => {
+        setPageLoading((prev) => ({ ...prev, active: false }));
+      }, 150);
+    }, 450);
+  };
+
   const openAuth = (tab: 'login' | 'register') => {
-    setAuthInitialTab(tab);
-    setIsAuthModalOpen(true);
+    if (!currentUser) {
+      setIsGuestBypass(false);
+    } else {
+      setAuthInitialTab(tab);
+      setIsAuthModalOpen(true);
+    }
+  };
+
+  const handleSelectTabWithLoading = (tab: string) => {
+    if (tab === activeTab && !activeQuiz) return;
+
+    let title = 'Baking Menu & Quizzes';
+    let icon = '🥐';
+    if (tab === 'leaderboards') {
+      title = 'Baking Hall of Fame';
+      icon = '🏆';
+    } else if (tab === 'history') {
+      title = 'My Baking History';
+      icon = '📜';
+    } else if (tab === 'teacher') {
+      title = 'Teacher Tools Console';
+      icon = '👩‍🍳';
+    }
+
+    triggerTransition(title, icon, () => {
+      setActiveQuiz(null);
+      setActiveTab(tab as any);
+    });
   };
 
   const handleStartQuiz = (quiz: Quiz) => {
-    setActiveQuiz(quiz);
+    const icon = QUIZ_EMOJIS[quiz.id]?.icon || '🥐';
+    triggerTransition(`Preparing ${quiz.title}...`, icon, () => {
+      setActiveQuiz(quiz);
+    });
+  };
+
+  const handleExitQuiz = () => {
+    triggerTransition('Returning to Bakery Menu...', '🧁', () => {
+      setActiveQuiz(null);
+    });
   };
 
   // Active quiz runner state
@@ -138,6 +199,22 @@ function MainApp() {
     return Math.max(...userRuns.map((r) => r.score));
   };
 
+  // Start on Login Page for anyone visiting the app unless already logged in
+  useEffect(() => {
+    if (!currentUser) {
+      setIsGuestBypass(false);
+    }
+  }, [currentUser]);
+
+  // If no user is active and guest bypass was not pressed, display the full LoginPage
+  if (!currentUser && !isGuestBypass) {
+    return (
+      <LoginPage
+        onContinueAsGuest={() => setIsGuestBypass(true)}
+      />
+    );
+  }
+
   // Filter published quizzes for players (all visible to teachers)
   const visibleQuizzes = isTeacher ? quizzes : quizzes.filter((q) => q.published);
 
@@ -147,10 +224,7 @@ function MainApp() {
       {/* Top Navbar */}
       <Navbar
         currentTab={activeTab}
-        onSelectTab={(tab) => {
-          setActiveQuiz(null);
-          setActiveTab(tab as any);
-        }}
+        onSelectTab={handleSelectTabWithLoading}
         onOpenAuth={openAuth}
       />
 
@@ -165,7 +239,7 @@ function MainApp() {
               questions={questions.filter((q) => q.quizId === activeQuiz.id)}
               previousBestScore={getPreviousBestScore(activeQuiz.id)}
               onFinishQuiz={handleFinishQuiz}
-              onExit={() => setActiveQuiz(null)}
+              onExit={handleExitQuiz}
             />
           </div>
         ) : (
@@ -440,6 +514,13 @@ function MainApp() {
         )}
 
       </main>
+
+      {/* Cute Page Transition Loader */}
+      <CutePageLoader
+        isLoading={pageLoading.active}
+        targetTitle={pageLoading.title}
+        targetIcon={pageLoading.icon}
+      />
 
       {/* Auth Modal */}
       <AuthModal
