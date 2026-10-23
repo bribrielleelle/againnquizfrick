@@ -3,16 +3,10 @@ import { Attempt, Quiz } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { 
   Trophy, 
-  Award, 
-  Medal, 
   Crown, 
   Sparkles, 
-  BookOpen, 
-  CheckCircle2, 
-  User, 
-  Clock, 
-  TrendingUp,
-  Layers
+  Medal,
+  Clock
 } from 'lucide-react';
 
 interface LeaderboardViewProps {
@@ -146,42 +140,46 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({ attempts, quiz
   return (
     <div className="w-full max-w-4xl mx-auto space-y-6 animate-in fade-in duration-200">
       
-      {/* Leaderboard Header */}
-      <div className="rounded-3xl bg-slate-900/90 border border-slate-800 p-6 sm:p-8 shadow-xl backdrop-blur-md relative overflow-hidden">
-        <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-sky-400 via-sky-300 to-pink-300" />
+      {/* Leaderboard Header with Cameo & Bow */}
+      <div className="rounded-3xl bg-white/95 rococo-frame p-6 sm:p-8 shadow-xl relative overflow-hidden">
+        
+        {/* Top Black Bow */}
+        <div className="absolute -top-3 left-6 text-3xl select-none">
+          🎀
+        </div>
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-sky-400/20 to-pink-400/20 border border-sky-400/30 flex items-center justify-center text-pink-300">
-              <Trophy className="w-6 h-6 text-amber-400" />
+            <div className="w-14 h-14 rounded-full bg-pink-100 border-2 border-neutral-900 flex items-center justify-center text-pink-600 shadow-sm">
+              <span className="text-2xl">🏆</span>
             </div>
             <div>
-              <h2 className="text-2xl font-black text-slate-100 flex items-center gap-2">
+              <h2 className="font-playfair italic font-black text-2xl sm:text-3xl text-neutral-900 flex items-center gap-2">
                 <span>Baking Hall of Fame</span>
               </h2>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-xs text-neutral-600 mt-0.5">
                 Deterministic rankings per Phase 4 specification · Usernames only for player privacy.
               </p>
             </div>
           </div>
 
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-xs text-slate-300">
-            <Sparkles className="w-4 h-4 text-pink-300" />
-            <span>Top 10 + Pinned Your Rank</span>
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-pink-100 border border-pink-300 text-xs font-bold text-pink-900 shadow-xs">
+            <Sparkles className="w-4 h-4 text-pink-600" />
+            <span>Top 10 + Pinned Rank</span>
           </div>
         </div>
 
         {/* Tab Selector: Overall + 5 Baking Quizzes */}
-        <div className="flex items-center gap-2 mt-6 pt-6 border-t border-slate-800 overflow-x-auto pb-1 scrollbar-none">
+        <div className="flex items-center gap-2 mt-6 pt-6 border-t-2 border-pink-100 overflow-x-auto pb-1 scrollbar-none">
           <button
             onClick={() => setSelectedTab('overall')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
+            className={`px-4 py-2 rounded-full text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
               selectedTab === 'overall'
-                ? 'bg-gradient-to-r from-sky-400 to-pink-300 text-slate-950 shadow-md shadow-pink-500/10'
-                : 'bg-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-750'
+                ? 'bg-neutral-900 text-white shadow-md border border-neutral-900'
+                : 'bg-pink-50 text-neutral-700 hover:text-neutral-900 hover:bg-pink-100 border border-pink-200'
             }`}
           >
-            <Crown className="w-3.5 h-3.5" />
+            <span>👑</span>
             <span>Overall Board</span>
           </button>
 
@@ -189,10 +187,10 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({ attempts, quiz
             <button
               key={quiz.id}
               onClick={() => setSelectedTab(quiz.id)}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
+              className={`px-3.5 py-2 rounded-full text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
                 selectedTab === quiz.id
-                  ? 'bg-gradient-to-r from-sky-400 to-pink-300 text-slate-950 shadow-md shadow-pink-500/10'
-                  : 'bg-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-750'
+                  ? 'bg-neutral-900 text-white shadow-md border border-neutral-900'
+                  : 'bg-pink-50 text-neutral-700 hover:text-neutral-900 hover:bg-pink-100 border border-pink-200'
               }`}
             >
               <span>{quiz.title}</span>
@@ -202,38 +200,38 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({ attempts, quiz
       </div>
 
       {/* Pinned "Your Rank" Row */}
-      <div className="rounded-2xl bg-gradient-to-r from-sky-950/40 via-slate-900 to-pink-950/40 border border-sky-400/30 p-4 shadow-lg flex items-center justify-between">
+      <div className="rounded-2xl bg-white/95 border-2 border-pink-300 p-4 shadow-md flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-slate-800 flex items-center justify-center font-black text-sm text-sky-300 border border-slate-700">
+          <div className="w-10 h-10 rounded-full bg-pink-100 flex items-center justify-center font-black text-sm text-pink-700 border-2 border-pink-300">
             {activeUserRankIndex >= 0 ? `#${activeUserRankIndex + 1}` : '—'}
           </div>
           <div>
-            <div className="text-xs font-bold text-slate-200 flex items-center gap-2">
+            <div className="text-xs font-black text-neutral-900 flex items-center gap-2">
               <span>Your Ranking: {currentUser ? currentUser.username : 'Guest'}</span>
-              <span className="text-[10px] px-2 py-0.2 rounded bg-sky-500/20 text-sky-300 uppercase font-semibold">
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-pink-200 text-pink-900 uppercase font-black">
                 Pinned
               </span>
             </div>
-            <div className="text-[11px] text-slate-400 mt-0.5">
+            <div className="text-[11px] text-neutral-600 mt-0.5">
               {activeUserRankIndex >= 0 ? (
                 selectedTab === 'overall' ? (
                   <span>
                     Ranked #{activeUserRankIndex + 1} with{' '}
-                    <strong className="text-sky-300">{overallRanked[activeUserRankIndex].completedAttempts}</strong> completed{' '}
+                    <strong className="text-pink-700 font-bold">{overallRanked[activeUserRankIndex].completedAttempts}</strong> completed{' '}
                     {overallRanked[activeUserRankIndex].completedAttempts === 1 ? 'attempt' : 'attempts'} and{' '}
-                    <strong className="text-pink-300">{overallRanked[activeUserRankIndex].totalCorrect}</strong> correct answers!
+                    <strong className="text-pink-700 font-bold">{overallRanked[activeUserRankIndex].totalCorrect}</strong> correct answers!
                   </span>
                 ) : (
                   <span>
                     Ranked #{activeUserRankIndex + 1} on {selectedQuizObj?.title} with best score of{' '}
-                    <strong className="text-pink-300">{currentQuizRanked[activeUserRankIndex].bestScore}/10</strong> in{' '}
-                    <strong className="text-sky-300">{currentQuizRanked[activeUserRankIndex].completedAttempts}</strong>{' '}
+                    <strong className="text-pink-700 font-bold">{currentQuizRanked[activeUserRankIndex].bestScore}/10</strong> in{' '}
+                    <strong className="text-pink-700 font-bold">{currentQuizRanked[activeUserRankIndex].completedAttempts}</strong>{' '}
                     {currentQuizRanked[activeUserRankIndex].completedAttempts === 1 ? 'try' : 'tries'}!
                   </span>
                 )
               ) : (
-                <span className="text-slate-400">
-                  You are not ranked on this board yet. Take a quiz to claim your spot!
+                <span className="text-neutral-500">
+                  You are not ranked on this board yet. Take a quiz to claim your spot in the bakery!
                 </span>
               )}
             </div>
@@ -242,20 +240,20 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({ attempts, quiz
       </div>
 
       {/* Leaderboard Table / Cards */}
-      <div className="rounded-3xl bg-slate-900/90 border border-slate-800 p-6 sm:p-8 shadow-xl">
-        <div className="flex items-center justify-between mb-4">
+      <div className="rounded-3xl bg-white/95 border-2 border-pink-200 p-6 sm:p-8 shadow-md">
+        <div className="flex items-center justify-between mb-4 pb-2 border-b-2 border-pink-100">
           <div>
-            <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2">
-              <span>{selectedTab === 'overall' ? 'Overall Leaderboard' : `${selectedQuizObj?.title} Standings`}</span>
+            <h3 className="font-playfair font-bold text-xl text-neutral-900 flex items-center gap-2">
+              <span>{selectedTab === 'overall' ? 'Overall Pastry Leaderboard' : `${selectedQuizObj?.title} Standings`}</span>
             </h3>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-neutral-500">
               {selectedTab === 'overall'
                 ? 'Ranked primarily by total completed attempts (D17), ties by total correct answers.'
                 : 'Ranked by highest score (D16), ties by fewer attempts (efficiency).'}
             </p>
           </div>
 
-          <span className="text-xs text-slate-400 font-medium">
+          <span className="text-xs font-black uppercase text-pink-700 bg-pink-50 px-3 py-1 rounded-full border border-pink-200">
             Top 10 Display
           </span>
         </div>
@@ -263,7 +261,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({ attempts, quiz
         {selectedTab === 'overall' ? (
           /* OVERALL BOARD */
           overallRanked.length === 0 ? (
-            <div className="py-12 text-center text-xs text-slate-400">
+            <div className="py-12 text-center text-xs text-neutral-500">
               No completed attempts on record yet. Complete your first quiz to top the board!
             </div>
           ) : (
@@ -277,49 +275,49 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({ attempts, quiz
                 return (
                   <div
                     key={row.userId}
-                    className={`p-4 rounded-2xl border flex items-center justify-between text-xs transition-all ${
+                    className={`p-3.5 sm:p-4 rounded-2xl border-2 flex items-center justify-between text-xs transition-all ${
                       isFirst
-                        ? 'bg-amber-950/20 border-amber-500/40 shadow-sm'
+                        ? 'bg-pink-100/70 border-neutral-900 shadow-sm'
                         : isYou
-                        ? 'bg-sky-950/20 border-sky-400/40'
-                        : 'bg-slate-800/50 border-slate-700/60'
+                        ? 'bg-pink-50 border-pink-400'
+                        : 'bg-white border-pink-100 hover:border-pink-300'
                     }`}
                   >
                     <div className="flex items-center gap-3.5">
                       <div
-                        className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs ${
+                        className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs ${
                           isFirst
-                            ? 'bg-amber-400 text-slate-950 shadow-md shadow-amber-500/20'
+                            ? 'bg-neutral-900 text-white shadow-xs'
                             : isSecond
-                            ? 'bg-slate-300 text-slate-900'
+                            ? 'bg-pink-300 text-neutral-900'
                             : isThird
-                            ? 'bg-amber-700 text-amber-100'
-                            : 'bg-slate-700/80 text-slate-300'
+                            ? 'bg-pink-200 text-neutral-900'
+                            : 'bg-pink-50 text-neutral-700 border border-pink-200'
                         }`}
                       >
-                        {isFirst ? <Crown className="w-4 h-4" /> : `#${idx + 1}`}
+                        {isFirst ? '👑' : `#${idx + 1}`}
                       </div>
 
                       <div>
-                        <div className="font-bold text-sm text-slate-100 flex items-center gap-2">
+                        <div className="font-bold text-sm text-neutral-900 flex items-center gap-2">
                           <span>{row.username}</span>
                           {isYou && (
-                            <span className="text-[10px] px-1.5 py-0.2 rounded bg-sky-500/20 text-sky-300 font-bold">
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-pink-200 text-pink-900 font-black">
                               You
                             </span>
                           )}
                         </div>
-                        <div className="text-[11px] text-slate-400 mt-0.5">
+                        <div className="text-[11px] text-neutral-500 mt-0.5">
                           {row.totalCorrect} total correct answers ({row.totalQuestions > 0 ? Math.round((row.totalCorrect / row.totalQuestions) * 100) : 0}% accuracy)
                         </div>
                       </div>
                     </div>
 
                     <div className="text-right">
-                      <div className="font-mono font-bold text-base bg-gradient-to-r from-sky-400 to-pink-300 bg-clip-text text-transparent">
+                      <div className="font-serif font-black text-base text-pink-700">
                         {row.completedAttempts} {row.completedAttempts === 1 ? 'Attempt' : 'Attempts'}
                       </div>
-                      <div className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">
+                      <div className="text-[10px] text-neutral-500 uppercase tracking-wider font-bold">
                         Completed
                       </div>
                     </div>
@@ -331,7 +329,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({ attempts, quiz
         ) : (
           /* PER-QUIZ BOARD */
           currentQuizRanked.length === 0 ? (
-            <div className="py-12 text-center text-xs text-slate-400">
+            <div className="py-12 text-center text-xs text-neutral-500">
               No completed attempts on this quiz yet. Be the first to set the record!
             </div>
           ) : (
@@ -345,49 +343,49 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({ attempts, quiz
                 return (
                   <div
                     key={row.userId}
-                    className={`p-4 rounded-2xl border flex items-center justify-between text-xs transition-all ${
+                    className={`p-3.5 sm:p-4 rounded-2xl border-2 flex items-center justify-between text-xs transition-all ${
                       isFirst
-                        ? 'bg-amber-950/20 border-amber-500/40 shadow-sm'
+                        ? 'bg-pink-100/70 border-neutral-900 shadow-sm'
                         : isYou
-                        ? 'bg-sky-950/20 border-sky-400/40'
-                        : 'bg-slate-800/50 border-slate-700/60'
+                        ? 'bg-pink-50 border-pink-400'
+                        : 'bg-white border-pink-100 hover:border-pink-300'
                     }`}
                   >
                     <div className="flex items-center gap-3.5">
                       <div
-                        className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs ${
+                        className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs ${
                           isFirst
-                            ? 'bg-amber-400 text-slate-950 shadow-md shadow-amber-500/20'
+                            ? 'bg-neutral-900 text-white shadow-xs'
                             : isSecond
-                            ? 'bg-slate-300 text-slate-900'
+                            ? 'bg-pink-300 text-neutral-900'
                             : isThird
-                            ? 'bg-amber-700 text-amber-100'
-                            : 'bg-slate-700/80 text-slate-300'
+                            ? 'bg-pink-200 text-neutral-900'
+                            : 'bg-pink-50 text-neutral-700 border border-pink-200'
                         }`}
                       >
-                        {isFirst ? <Crown className="w-4 h-4" /> : `#${idx + 1}`}
+                        {isFirst ? '👑' : `#${idx + 1}`}
                       </div>
 
                       <div>
-                        <div className="font-bold text-sm text-slate-100 flex items-center gap-2">
+                        <div className="font-bold text-sm text-neutral-900 flex items-center gap-2">
                           <span>{row.username}</span>
                           {isYou && (
-                            <span className="text-[10px] px-1.5 py-0.2 rounded bg-sky-500/20 text-sky-300 font-bold">
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-pink-200 text-pink-900 font-black">
                               You
                             </span>
                           )}
                         </div>
-                        <div className="text-[11px] text-slate-400 mt-0.5">
+                        <div className="text-[11px] text-neutral-500 mt-0.5">
                           Achieved in {row.completedAttempts} {row.completedAttempts === 1 ? 'attempt' : 'attempts'} (efficiency tie-break)
                         </div>
                       </div>
                     </div>
 
                     <div className="text-right">
-                      <div className="font-mono font-bold text-base text-pink-300">
+                      <div className="font-serif font-black text-base text-pink-700">
                         {row.bestScore} / {row.questionCount}
                       </div>
-                      <div className="text-[10px] text-sky-300 font-semibold">
+                      <div className="text-[10px] text-neutral-600 font-bold">
                         {row.bestPercentage}% Score
                       </div>
                     </div>
