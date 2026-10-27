@@ -94,10 +94,10 @@
   box-shadow: 0 14px 30px -4px rgba(244, 114, 182, 0.3), 0 6px 10px -2px rgba(0, 0, 0, 0.08);
 }
 
-/* Pastel pixel-art cursor inspired by the supplied reference */
+/* Pusheen and donut cursors cropped from the supplied reference */
 html,
 body {
-  cursor: url('./assets/pastel-pixel-cursor.svg') 3 2, auto;
+  cursor: url('./assets/pusheen-donut-cursor.png') 6 6, auto;
 }
 
 button,
@@ -107,7 +107,7 @@ a,
 select,
 summary,
 .cursor-pointer {
-  cursor: url('./assets/pastel-pixel-cursor.svg') 3 2, pointer;
+  cursor: url('./assets/pusheen-ring-cursor.png') 6 6, pointer;
 }
 
 input:not([type='button']):not([type='submit']):not([type='checkbox']):not([type='radio']),
