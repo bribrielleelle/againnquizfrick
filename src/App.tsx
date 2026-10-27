@@ -11,6 +11,8 @@ import { LoginPage } from './components/LoginPage';
 import { CutePageLoader } from './components/CutePageLoader';
 import { INITIAL_QUIZZES, INITIAL_QUESTIONS } from './data/bakingQuizzes';
 import { INITIAL_ATTEMPTS } from './data/initialAttempts';
+import { PersonalityQuizRunner } from './components/PersonalityQuizRunner';
+import { PASTRY_ARCHETYPES, PastryArchetype } from './data/personalityQuiz';
 import { Quiz, Question, Attempt } from './types';
 import { 
   Sparkles, 
@@ -27,6 +29,7 @@ import {
 const STORAGE_KEY_ATTEMPTS = 'brielle_quiz_completed_attempts';
 const STORAGE_KEY_QUIZZES = 'brielle_quiz_quizzes_state';
 const STORAGE_KEY_QUESTIONS = 'brielle_quiz_questions_state';
+const STORAGE_KEY_PASTRY_PROFILES = 'brielle_quiz_user_pastry_profiles';
 
 const QUIZ_EMOJIS: Record<string, { icon: string; tag: string; badge: string }> = {
   'quiz-pastry-fundamentals': { icon: '🥐', tag: 'Choux & Laminated', badge: 'Crispy & Flaky' },
@@ -38,11 +41,26 @@ const QUIZ_EMOJIS: Record<string, { icon: string; tag: string; badge: string }> 
 
 function MainApp() {
   const { currentUser, isTeacher } = useAuth();
-  const [activeTab, setActiveTab] = useState<'quizzes' | 'leaderboards' | 'history' | 'teacher'>('quizzes');
+  const [activeTab, setActiveTab] = useState<'quizzes' | 'leaderboards' | 'history' | 'teacher' | 'personality'>('quizzes');
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authInitialTab, setAuthInitialTab] = useState<'login' | 'register'>('login');
   const [isQAModalOpen, setIsQAModalOpen] = useState(false);
   const [isGuestBypass, setIsGuestBypass] = useState(false);
+
+  // Pastry personality profiles map: { [userIdOrName: string]: archetypeId }
+  const [pastryProfiles, setPastryProfiles] = useState<Record<string, string>>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_PASTRY_PROFILES);
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  const currentUserIdKey = currentUser ? currentUser.id : 'guest';
+  const currentPastryArchetype = pastryProfiles[currentUserIdKey]
+    ? PASTRY_ARCHETYPES[pastryProfiles[currentUserIdKey]]
+    : null;
 
   // Quizzes & Questions state (persisted in localStorage, editable by teachers)
   const [quizzes, setQuizzes] = useState<Quiz[]>(() => {
@@ -142,11 +160,21 @@ function MainApp() {
     } else if (tab === 'teacher') {
       title = 'Teacher Tools Console';
       icon = '👩‍🍳';
+    } else if (tab === 'personality') {
+      title = 'What Pastry Are You? Personality Quiz';
+      icon = '🎀';
     }
 
     triggerTransition(title, icon, () => {
       setActiveQuiz(null);
       setActiveTab(tab as any);
+    });
+  };
+
+  const handleStartPersonalityQuiz = () => {
+    triggerTransition('What Pastry Are You? Quiz', '🎀', () => {
+      setActiveQuiz(null);
+      setActiveTab('personality');
     });
   };
 
@@ -324,6 +352,27 @@ function MainApp() {
                     <Clock className="w-3.5 h-3.5 text-pink-500" />
                     <span>Timed Mode: 30s/Q ⏱️</span>
                   </span>
+
+                  {currentPastryArchetype ? (
+                    <button
+                      onClick={handleStartPersonalityQuiz}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-pink-100 hover:bg-pink-200 border-2 border-pink-400 text-pink-900 font-bold transition-all cursor-pointer shadow-xs"
+                      title="View or retake your pastry personality quiz"
+                    >
+                      <span>{currentPastryArchetype.emoji}</span>
+                      <span>Pastry Soul:</span>
+                      <strong className="text-pink-700">{currentPastryArchetype.name}</strong>
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleStartPersonalityQuiz}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-pink-100 hover:bg-pink-200 border border-pink-300 text-pink-900 font-bold transition-all cursor-pointer shadow-xs"
+                    >
+                      <span>✨</span>
+                      <span>What Pastry Are You?</span>
+                      <span className="text-[10px] bg-pink-500 text-white px-1.5 py-0.2 rounded-full font-black">QUIZ</span>
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -332,6 +381,72 @@ function MainApp() {
             {activeTab === 'quizzes' && (
               <div className="w-full space-y-8">
                 
+                {/* SPECIAL FEATURE: What Pastry Are You Personality Quiz Banner */}
+                <div className="relative">
+                  {/* Black Bow Accent */}
+                  <div className="absolute -top-3.5 -left-2 sm:-left-3 z-20 text-3xl sm:text-4xl drop-shadow-md select-none transform -rotate-12">
+                    🎀
+                  </div>
+
+                  <div className="rounded-3xl bg-gradient-to-r from-pink-100 via-rose-50 to-pink-100 border-2 border-pink-400 p-6 sm:p-7 shadow-lg relative overflow-hidden group">
+                    {/* Background Decorative Pastry Emojis */}
+                    <div className="absolute right-4 -bottom-4 text-7xl opacity-15 select-none pointer-events-none group-hover:scale-110 transition-transform">
+                      🍰
+                    </div>
+
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 relative z-10">
+                      <div className="space-y-2">
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider bg-white/90 border border-pink-300 text-pink-900 shadow-xs">
+                          <span>✨ Special Feature</span>
+                          <span className="w-1.5 h-1.5 rounded-full bg-pink-500" />
+                          <span>No Wrong Answers!</span>
+                          <span>🧁</span>
+                        </div>
+
+                        <h3 className="font-playfair italic font-black text-2xl sm:text-3xl text-neutral-900 leading-tight">
+                          What Pastry Are You?
+                        </h3>
+                        <p className="text-xs sm:text-sm text-neutral-700 max-w-lg leading-relaxed">
+                          Are you a flaky golden croissant, a delicate Parisian macaron, or an authentic wild sourdough? Take this sweet 7-question personality test to unveil your baking soul!
+                        </p>
+
+                        <div className="flex items-center gap-2 text-xl pt-1">
+                          <span>🥐</span>
+                          <span>🍓</span>
+                          <span>🧁</span>
+                          <span>🍪</span>
+                          <span>🍰</span>
+                          <span>🥖</span>
+                          <span>🥨</span>
+                          <span>🍫</span>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col sm:flex-row md:flex-col items-start md:items-end gap-2.5 flex-shrink-0">
+                        {currentPastryArchetype ? (
+                          <div className="text-left md:text-right bg-white/90 border-2 border-pink-300 rounded-2xl p-3 shadow-xs">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-neutral-500 block">
+                              Your Pastry Soul:
+                            </span>
+                            <span className="text-sm font-black text-pink-700 flex items-center gap-1">
+                              <span>{currentPastryArchetype.emoji}</span>
+                              <span>{currentPastryArchetype.name}</span>
+                            </span>
+                          </div>
+                        ) : null}
+
+                        <button
+                          onClick={handleStartPersonalityQuiz}
+                          className="px-6 py-3 rounded-full font-black uppercase tracking-wider text-xs sm:text-sm text-white bg-neutral-900 hover:bg-pink-600 shadow-lg transition-all active:scale-95 cursor-pointer flex items-center gap-2 border border-pink-200"
+                        >
+                          <Sparkles className="w-4 h-4 text-pink-300" />
+                          <span>{currentPastryArchetype ? 'Retake Personality Quiz 🔄' : 'Take Personality Quiz ✨'}</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Baking Quizzes Cards */}
                 <div>
                   <div className="flex items-center justify-between mb-5 px-1">
@@ -508,6 +623,23 @@ function MainApp() {
                 attempts={completedAttempts}
                 onUpdateQuizzes={(updated) => setQuizzes(updated)}
                 onUpdateQuestions={(updated) => setQuestions(updated)}
+              />
+            )}
+
+            {/* TAB CONTENT: What Pastry Are You Personality Quiz */}
+            {activeTab === 'personality' && (
+              <PersonalityQuizRunner
+                onExit={() => handleSelectTabWithLoading('quizzes')}
+                savedArchetypeId={currentPastryArchetype?.id || null}
+                onSaveToProfile={(archetype) => {
+                  setPastryProfiles((prev) => {
+                    const next = { ...prev, [currentUserIdKey]: archetype.id };
+                    try {
+                      localStorage.setItem(STORAGE_KEY_PASTRY_PROFILES, JSON.stringify(next));
+                    } catch {}
+                    return next;
+                  });
+                }}
               />
             )}
           </>
