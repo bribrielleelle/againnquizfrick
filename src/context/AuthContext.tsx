@@ -64,9 +64,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_USER);
-      return saved ? JSON.parse(saved) : DEFAULT_USERS[0];
+      return saved ? JSON.parse(saved) : null;
     } catch {
-      return DEFAULT_USERS[0];
+      return null;
     }
   });
 

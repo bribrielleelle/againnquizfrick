@@ -24,7 +24,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 
     const res = loginOrRegister(username, email, password);
     if (res.success) {
-      setSavedSuccess(`Welcome, ${res.user.username}! Your profile (${res.user.email}) has been saved.`);
+      setSavedSuccess(`Welcome, ${res.user.username}! Your baker profile (${res.user.email}) has been saved.`);
       setTimeout(() => {
         setSavedSuccess(null);
         onClose();
@@ -38,36 +38,39 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl overflow-hidden">
-        {/* Top sky blue fading ombre into light pink bar */}
-        <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-sky-400 via-sky-300 to-pink-300" />
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-950/75 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="relative w-full max-w-md bg-white rococo-frame rounded-3xl p-6 sm:p-8 shadow-2xl overflow-hidden">
+        
+        {/* Top Black Ribbon Bow */}
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-3xl select-none">
+          🎀
+        </div>
 
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-5 right-5 p-1.5 rounded-xl text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition-colors cursor-pointer"
+          className="absolute top-5 right-5 p-1.5 rounded-full text-neutral-500 hover:text-neutral-900 hover:bg-pink-100 transition-colors cursor-pointer"
         >
           <X className="w-5 h-5" />
         </button>
 
         {/* Header */}
-        <div className="text-center mb-6">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-slate-800 text-sky-300 border border-slate-700 mb-2">
-            <Sparkles className="w-3.5 h-3.5 text-pink-300" />
-            <span>Player Sign-In</span>
+        <div className="text-center mt-2 mb-6">
+          <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-black uppercase tracking-wider bg-pink-100 text-pink-800 border border-pink-300 mb-2">
+            <span>🧁</span>
+            <span>Baker Registry</span>
           </div>
-          <h2 className="text-2xl font-extrabold text-slate-100 tracking-tight">
+          <h2 className="font-playfair italic font-black text-2xl sm:text-3xl text-neutral-900 tracking-tight">
             Log In or Sign Up
           </h2>
-          <p className="text-xs text-slate-400 mt-1 max-w-xs mx-auto">
-            Enter your name, email, and any password you desire. Your player profile and score history are automatically saved!
+          <p className="text-xs text-neutral-600 mt-1 max-w-xs mx-auto leading-relaxed">
+            Enter your baker name, email, and any password you desire. Your profile and score history are automatically saved!
           </p>
         </div>
 
         {savedSuccess && (
-          <div className="mb-4 p-3 rounded-xl bg-emerald-950/60 border border-emerald-500/50 text-emerald-300 text-xs flex items-center gap-2 animate-in fade-in">
-            <CheckCircle2 className="w-4 h-4 flex-shrink-0 text-emerald-400" />
+          <div className="mb-4 p-3 rounded-2xl bg-emerald-100 border-2 border-emerald-400 text-emerald-900 text-xs font-bold flex items-center gap-2 animate-in fade-in">
+            <CheckCircle2 className="w-4 h-4 flex-shrink-0 text-emerald-700" />
             <span>{savedSuccess}</span>
           </div>
         )}
@@ -75,19 +78,19 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Username / Player Name (Required) */}
           <div>
-            <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5 flex items-center justify-between">
-              <span>Your Name or Username</span>
-              <span className="text-[10px] text-pink-400 font-semibold">*Required</span>
+            <label className="block text-xs font-black uppercase tracking-wider text-neutral-700 mb-1.5 flex items-center justify-between">
+              <span>Your Baker Name</span>
+              <span className="text-[10px] text-pink-600 font-bold">*Required</span>
             </label>
             <div className="relative">
-              <UserIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-sky-400" />
+              <UserIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-pink-600" />
               <input
                 type="text"
                 required
-                placeholder="e.g. Brielle or PastryPro"
+                placeholder="e.g. Brielle or PastryPupil"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-800/90 border border-slate-700 rounded-xl text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-sky-400 transition-colors"
+                className="w-full pl-10 pr-4 py-2.5 bg-pink-50/60 border-2 border-pink-200 rounded-2xl text-sm text-neutral-900 font-bold placeholder:text-neutral-400 focus:outline-none focus:border-pink-500 focus:bg-white transition-colors"
                 autoFocus
               />
             </div>
@@ -95,19 +98,19 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 
           {/* Email Address (Required) */}
           <div>
-            <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+            <label className="block text-xs font-black uppercase tracking-wider text-neutral-700 mb-1.5 flex items-center justify-between">
               <span>Email Address</span>
-              <span className="text-[10px] text-pink-400 font-semibold">*Required</span>
+              <span className="text-[10px] text-pink-600 font-bold">*Required</span>
             </label>
             <div className="relative">
-              <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-sky-400" />
+              <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-pink-600" />
               <input
                 type="email"
                 required
-                placeholder="e.g. brielle@example.com"
+                placeholder="e.g. brielle@baking.quiz"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-800/90 border border-slate-700 rounded-xl text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-sky-400 transition-colors"
+                className="w-full pl-10 pr-4 py-2.5 bg-pink-50/60 border-2 border-pink-200 rounded-2xl text-sm text-neutral-900 font-bold placeholder:text-neutral-400 focus:outline-none focus:border-pink-500 focus:bg-white transition-colors"
               />
             </div>
           </div>
@@ -115,28 +118,28 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
           {/* Any Password they desire (Required) */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">
+              <label className="block text-xs font-black uppercase tracking-wider text-neutral-700">
                 Password
               </label>
-              <span className="text-[10px] text-pink-300 font-medium">
+              <span className="text-[10px] text-pink-700 font-bold">
                 (Any password you desire)
               </span>
             </div>
             <div className="relative">
-              <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-pink-400" />
+              <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-pink-600" />
               <input
                 type="text"
                 required
                 placeholder="Enter any password (e.g. 123, cake, baker)"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-800/90 border border-slate-700 rounded-xl text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-pink-400 transition-colors"
+                className="w-full pl-10 pr-4 py-2.5 bg-pink-50/60 border-2 border-pink-200 rounded-2xl text-sm text-neutral-900 font-bold placeholder:text-neutral-400 focus:outline-none focus:border-pink-500 focus:bg-white transition-colors"
               />
             </div>
-            <div className="flex items-center justify-between text-[11px] text-slate-400 mt-1.5 px-0.5">
+            <div className="flex items-center justify-between text-[11px] text-neutral-500 mt-1.5 px-0.5">
               <span>Players: Use any password</span>
-              <span className="text-[10px] text-pink-300 bg-pink-950/40 border border-pink-500/30 px-1.5 py-0.5 rounded-md font-mono">
-                Teacher password: baker123
+              <span className="text-[10px] text-pink-800 bg-pink-100 border border-pink-300 px-2 py-0.5 rounded-full font-mono font-bold">
+                Teacher pass: baker123
               </span>
             </div>
           </div>
@@ -144,21 +147,21 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
           {/* Submit Button */}
           <button
             type="submit"
-            className="w-full mt-2 py-3 rounded-2xl font-bold text-sm text-slate-950 bg-gradient-to-r from-sky-400 via-sky-300 to-pink-300 hover:opacity-95 shadow-md shadow-pink-500/10 transition-transform active:scale-95 cursor-pointer flex items-center justify-center gap-2"
+            className="w-full mt-2 py-3 rounded-full font-black uppercase tracking-wider text-xs text-white bg-neutral-900 hover:bg-pink-600 shadow-md transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-2 border border-pink-200"
           >
-            <span>Log In &amp; Save Player</span>
+            <span>Log In &amp; Save Profile 🥐</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         </form>
 
         {/* Saved Players on this Device */}
         {usersList.length > 0 && (
-          <div className="mt-6 pt-5 border-t border-slate-800">
+          <div className="mt-6 pt-5 border-t-2 border-pink-100">
             <div className="flex items-center justify-between mb-2.5">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                Saved Players on this Device ({usersList.length})
+              <span className="text-[11px] font-black uppercase tracking-wider text-neutral-600">
+                Saved Bakers on Device ({usersList.length})
               </span>
-              <span className="text-[10px] text-sky-400">1-Tap Switch</span>
+              <span className="text-[10px] text-pink-700 font-bold">1-Tap Switch</span>
             </div>
 
             <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
@@ -168,10 +171,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                 return (
                   <div
                     key={u.id}
-                    className={`flex items-center justify-between p-2.5 rounded-xl border text-xs transition-colors ${
+                    className={`flex items-center justify-between p-2 rounded-xl border text-xs transition-colors ${
                       isCurrent
-                        ? 'bg-slate-800 border-sky-400/50 text-slate-100'
-                        : 'bg-slate-800/40 border-slate-700/60 hover:bg-slate-800 hover:border-slate-600 text-slate-300'
+                        ? 'bg-pink-100 border-pink-400 text-neutral-900'
+                        : 'bg-white border-pink-200 hover:bg-pink-50 text-neutral-700'
                     }`}
                   >
                     <button
@@ -179,19 +182,19 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                       onClick={() => handleSelectSavedUser(u)}
                       className="flex items-center gap-2 text-left flex-1 cursor-pointer truncate"
                     >
-                      <div className="w-6 h-6 rounded-lg bg-slate-700 flex items-center justify-center font-bold text-[11px] text-pink-300 flex-shrink-0">
+                      <div className="w-6 h-6 rounded-full bg-neutral-900 flex items-center justify-center font-bold text-[11px] text-pink-200 flex-shrink-0">
                         {u.username.charAt(0).toUpperCase()}
                       </div>
                       <div className="truncate">
-                        <div className="font-bold flex items-center gap-1.5 truncate">
+                        <div className="font-bold flex items-center gap-1.5 truncate text-neutral-900">
                           <span className="truncate">{u.username}</span>
                           {isCurrent && (
-                            <span className="text-[9px] px-1.5 py-0.2 rounded bg-sky-500/20 text-sky-300 font-semibold flex-shrink-0">
+                            <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-neutral-900 text-white font-bold flex-shrink-0">
                               Active
                             </span>
                           )}
                         </div>
-                        <div className="text-[10px] text-slate-400 font-mono truncate">
+                        <div className="text-[10px] text-neutral-500 font-mono truncate">
                           {u.email}
                         </div>
                       </div>
@@ -203,7 +206,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                         e.stopPropagation();
                         deleteSavedUser(u.id);
                       }}
-                      className="p-1 text-slate-500 hover:text-rose-400 transition-colors ml-2 flex-shrink-0"
+                      className="p-1 text-neutral-400 hover:text-rose-600 transition-colors ml-2 flex-shrink-0 cursor-pointer"
                       title="Remove saved profile"
                     >
                       <Trash2 className="w-3.5 h-3.5" />

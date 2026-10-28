@@ -12,12 +12,9 @@ import {
   XCircle, 
   AlertTriangle, 
   Clock, 
-  BookOpen, 
   ShieldAlert, 
   Save, 
-  Eye, 
-  X,
-  FileText
+  X
 } from 'lucide-react';
 
 interface TeacherViewProps {
@@ -75,16 +72,16 @@ export const TeacherView: React.FC<TeacherViewProps> = ({
   // 1. Role Guard: If player tries to access teacher console, return 403 Forbidden
   if (!isTeacher) {
     return (
-      <div className="w-full max-w-xl mx-auto rounded-3xl bg-slate-900 border border-rose-500/30 p-8 text-center shadow-2xl animate-in fade-in">
-        <div className="w-16 h-16 mx-auto rounded-2xl bg-rose-950/60 border border-rose-500/40 flex items-center justify-center text-rose-400 mb-4">
+      <div className="w-full max-w-xl mx-auto rounded-3xl bg-white rococo-frame p-8 text-center shadow-2xl animate-in fade-in">
+        <div className="w-16 h-16 mx-auto rounded-full bg-rose-100 border-2 border-rose-400 flex items-center justify-center text-rose-600 mb-4">
           <ShieldAlert className="w-8 h-8" />
         </div>
-        <h2 className="text-2xl font-black text-rose-200">403 Forbidden: Teacher Access Required</h2>
-        <p className="text-xs text-slate-300 mt-2 max-w-md mx-auto leading-relaxed">
+        <h2 className="font-playfair font-black text-2xl text-neutral-900">403 Forbidden: Teacher Access Required</h2>
+        <p className="text-xs text-neutral-600 mt-2 max-w-md mx-auto leading-relaxed">
           You are currently logged in as a <strong>Player</strong>. Teacher authoring tools and question management require teacher credentials.
         </p>
-        <div className="mt-5 p-3 rounded-xl bg-slate-800/80 border border-slate-700 text-xs text-slate-400 max-w-sm mx-auto">
-          Tip: Enter teacher password <code className="text-pink-300 font-mono font-bold">baker123</code> during login or toggle your role in the top-right <strong>More Options</strong> menu.
+        <div className="mt-5 p-3.5 rounded-2xl bg-pink-50 border border-pink-200 text-xs text-neutral-700 max-w-sm mx-auto">
+          Tip: Enter teacher password <code className="text-pink-700 font-mono font-bold">baker123</code> during login or toggle your role in the top-right <strong>More Options</strong> menu.
         </div>
       </div>
     );
@@ -125,23 +122,34 @@ export const TeacherView: React.FC<TeacherViewProps> = ({
     setIsEditingQuestion(true);
   };
 
-  // Save or Update Question
+  // Save Question Handler (Enforces 4 choices, 1 correct, non-empty text)
   const handleSaveQuestion = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formPrompt.trim() || formChoices.some((c) => !c.trim())) {
-      setAlertMsg({ type: 'error', text: 'Prompt and all 4 choices are required.' });
+
+    if (!formPrompt.trim()) {
+      setAlertMsg({ type: 'error', text: 'Question prompt cannot be empty.' });
+      return;
+    }
+
+    if (formChoices.some((c) => !c.trim())) {
+      setAlertMsg({ type: 'error', text: 'All 4 answer choices (A, B, C, D) are required and must be non-empty.' });
+      return;
+    }
+
+    if (!['A', 'B', 'C', 'D'].includes(formCorrect)) {
+      setAlertMsg({ type: 'error', text: 'Please designate a valid correct choice (A, B, C, or D).' });
       return;
     }
 
     const formattedChoices = [
-      { id: `${Date.now()}-a`, label: 'A' as const, text: formChoices[0].trim() },
-      { id: `${Date.now()}-b`, label: 'B' as const, text: formChoices[1].trim() },
-      { id: `${Date.now()}-c`, label: 'C' as const, text: formChoices[2].trim() },
-      { id: `${Date.now()}-d`, label: 'D' as const, text: formChoices[3].trim() },
+      { id: `${Date.now()}-A`, label: 'A' as const, text: formChoices[0].trim() },
+      { id: `${Date.now()}-B`, label: 'B' as const, text: formChoices[1].trim() },
+      { id: `${Date.now()}-C`, label: 'C' as const, text: formChoices[2].trim() },
+      { id: `${Date.now()}-D`, label: 'D' as const, text: formChoices[3].trim() },
     ];
 
     if (editingQuestionId) {
-      // Edit existing
+      // Update existing question
       const updated = questions.map((q) => {
         if (q.id === editingQuestionId) {
           return {
@@ -150,7 +158,7 @@ export const TeacherView: React.FC<TeacherViewProps> = ({
             prompt: formPrompt.trim(),
             choices: formattedChoices,
             correctChoice: formCorrect,
-            explanation: formExplanation.trim(),
+            explanation: formExplanation.trim() || undefined,
             difficulty: formDifficulty,
           };
         }
@@ -159,43 +167,41 @@ export const TeacherView: React.FC<TeacherViewProps> = ({
       onUpdateQuestions(updated);
       setAlertMsg({ type: 'success', text: 'Question updated successfully!' });
     } else {
-      // Create new
+      // Create new question
       const newQuestion: Question = {
-        id: `custom-q-${Date.now()}`,
+        id: `q-custom-${Date.now()}`,
         quizId: formQuizId,
         prompt: formPrompt.trim(),
         choices: formattedChoices,
         correctChoice: formCorrect,
-        explanation: formExplanation.trim(),
+        explanation: formExplanation.trim() || undefined,
         difficulty: formDifficulty,
         position: currentQuizQuestions.length + 1,
       };
       onUpdateQuestions([...questions, newQuestion]);
 
-      // Update question count on the quiz object
+      // Update quiz questionCount
       const updatedQuizzes = quizzes.map((qz) =>
         qz.id === formQuizId ? { ...qz, questionCount: qz.questionCount + 1 } : qz
       );
       onUpdateQuizzes(updatedQuizzes);
-      setAlertMsg({ type: 'success', text: 'New question created and saved!' });
+      setAlertMsg({ type: 'success', text: 'New question added to quiz bank!' });
     }
 
     setIsEditingQuestion(false);
   };
 
-  // Delete question with Phase 4 Guards:
-  // Guard 1: Question in submitted attempts cannot be deleted (history protection)
-  // Guard 2: >= 10-question gate: deleting below 10 automatically unpublishes the quiz
+  // Delete Question Handler (Safely guards questions tied to attempts and checks 10-question gate)
   const handleDeleteQuestion = (questionId: string) => {
-    // Check Guard 1: History Protection
-    const isAnsweredInAttempts = attempts.some((att) =>
+    // Check Guard 1: Tied to attempts?
+    const hasAttempts = attempts.some((att) =>
       att.answers?.some((ans) => ans.questionId === questionId)
     );
 
-    if (isAnsweredInAttempts) {
+    if (hasAttempts) {
       setAlertMsg({
         type: 'warning',
-        text: 'History Protection: This question appears in submitted attempts and cannot be deleted. You may edit its text instead.',
+        text: 'This question has active student attempts recorded. Deleting questions with attempt history is locked to preserve academic score integrity.',
       });
       return;
     }
@@ -264,7 +270,6 @@ export const TeacherView: React.FC<TeacherViewProps> = ({
       return;
     }
 
-    // Header check
     const dataLines = lines.slice(1);
     const parsed: ParsedCsvRow[] = [];
     let valid = 0;
@@ -272,21 +277,15 @@ export const TeacherView: React.FC<TeacherViewProps> = ({
 
     dataLines.forEach((line, index) => {
       const parts = line.split(',').map((p) => p.trim());
-      const rowNum = index + 2; // Line in CSV
+      const rowNum = index + 2;
       
       const [quizTitle, difficulty, prompt, choiceA, choiceB, choiceC, choiceD, correct, explanation] = parts;
 
       let error = '';
       if (!quizTitle) error = 'Missing quiz title.';
-      else if (!quizzes.some((q) => q.title.toLowerCase() === quizTitle.toLowerCase())) {
-        error = `Quiz "${quizTitle}" not found. Must match an existing quiz.`;
-      } else if (!prompt) {
-        error = 'Missing question prompt.';
-      } else if (!choiceA || !choiceB || !choiceC || !choiceD) {
-        error = 'All 4 choices (A, B, C, D) are required.';
-      } else if (!['A', 'B', 'C', 'D'].includes(correct?.toUpperCase())) {
-        error = `Invalid correct answer "${correct}". Must be A, B, C, or D.`;
-      }
+      else if (!prompt) error = 'Missing question prompt.';
+      else if (!choiceA || !choiceB || !choiceC || !choiceD) error = 'Must provide all 4 choices (A, B, C, D).';
+      else if (!['A', 'B', 'C', 'D'].includes(correct?.toUpperCase())) error = `Correct choice must be A, B, C, or D (got "${correct}").`;
 
       const isValid = error === '';
       if (isValid) valid += 1;
@@ -294,9 +293,9 @@ export const TeacherView: React.FC<TeacherViewProps> = ({
 
       parsed.push({
         rowNum,
-        quizTitle: quizTitle || 'Unknown',
+        quizTitle: quizTitle || 'Untitled Quiz',
         difficulty: (['Easy', 'Medium', 'Hard'].includes(difficulty) ? difficulty : 'Medium') as any,
-        prompt: prompt || '',
+        prompt: prompt || 'Empty prompt',
         choiceA: choiceA || '',
         choiceB: choiceB || '',
         choiceC: choiceC || '',
@@ -304,7 +303,7 @@ export const TeacherView: React.FC<TeacherViewProps> = ({
         correct: (correct?.toUpperCase() as any) || 'A',
         explanation: explanation || '',
         isValid,
-        error: error || undefined,
+        error,
       });
     });
 
@@ -312,39 +311,41 @@ export const TeacherView: React.FC<TeacherViewProps> = ({
     setCsvSummary({ validCount: valid, invalidCount: invalid });
   };
 
-  // Download Standard CSV Template
   const handleDownloadTemplate = () => {
-    const csvContent = `# QuizWhiz / Brielle's Quiz CSV Import Template
-# Valid Quiz Titles: ${quizzes.map((q) => q.title).join(' | ')}
-quiz,difficulty,prompt,choiceA,choiceB,choiceC,choiceD,correct,explanation
-French Pastry & Viennoiserie,Easy,What French pastry is made with choux dough and pearl sugar?,Pâte sablée,Chouquettes,Brioche,Palmier,B,Chouquettes are bite-sized baked choux puffs sprinkled with pearl sugar.
-Cakes & Buttercreams,Medium,What cake uses whipped egg whites and cream of tartar with zero oil or yolks?,Pound Cake,Carrot Cake,Angel Food Cake,Red Velvet,C,Angel food cake contains zero fat and relies entirely on whipped egg white foam.
-`;
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const templateContent = [
+      'quiz_title,difficulty,prompt,choice_a,choice_b,choice_c,choice_d,correct_choice,explanation',
+      '"Pastry Fundamentals",Medium,"What prevents pie crust from shrinking during pre-baking?","Chilling the dough","Adding warm water","Over-kneading","Higher sugar","A","Chilling dough relaxes the gluten network."',
+      '"Science & Troubleshooting",Hard,"What chemical compound creates carbon dioxide with baking soda?","Acid (like buttermilk)","Sugar crystals","Salt","Cornstarch","A","Baking soda requires an acid to react and release CO2."',
+    ].join('\n');
+
+    const blob = new Blob([templateContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', 'quiz_questions_template.csv');
+    link.setAttribute('download', 'eclairwiz_quiz_questions_template.csv');
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  // Execute Confirmed Import
   const handleConfirmImport = () => {
-    if (!csvSummary || csvSummary.invalidCount > 0) return;
+    if (!csvSummary || csvSummary.invalidCount > 0 || csvSummary.validCount === 0) return;
 
     const newImportedQuestions: Question[] = csvParsedRows.map((row, idx) => {
-      const targetQuiz = quizzes.find((q) => q.title.toLowerCase() === row.quizTitle.toLowerCase()) || quizzes[0];
+      let matchedQuiz = quizzes.find(
+        (q) => q.title.toLowerCase().trim() === row.quizTitle.toLowerCase().trim()
+      );
+      const targetQuizId = matchedQuiz ? matchedQuiz.id : quizzes[0].id;
+
       return {
-        id: `csv-${Date.now()}-${idx}`,
-        quizId: targetQuiz.id,
+        id: `q-csv-${Date.now()}-${idx}`,
+        quizId: targetQuizId,
         prompt: row.prompt,
         choices: [
-          { id: `c-${idx}-a`, label: 'A', text: row.choiceA },
-          { id: `c-${idx}-b`, label: 'B', text: row.choiceB },
-          { id: `c-${idx}-c`, label: 'C', text: row.choiceC },
-          { id: `c-${idx}-d`, label: 'D', text: row.choiceD },
+          { id: `${Date.now()}-${idx}-A`, label: 'A', text: row.choiceA },
+          { id: `${Date.now()}-${idx}-B`, label: 'B', text: row.choiceB },
+          { id: `${Date.now()}-${idx}-C`, label: 'C', text: row.choiceC },
+          { id: `${Date.now()}-${idx}-D`, label: 'D', text: row.choiceD },
         ],
         correctChoice: row.correct,
         explanation: row.explanation,
@@ -355,7 +356,6 @@ Cakes & Buttercreams,Medium,What cake uses whipped egg whites and cream of tarta
 
     onUpdateQuestions([...questions, ...newImportedQuestions]);
 
-    // Update quiz question counts
     const updatedQuizzes = quizzes.map((q) => {
       const addedForThis = newImportedQuestions.filter((nq) => nq.quizId === q.id).length;
       return { ...q, questionCount: q.questionCount + addedForThis };
@@ -376,20 +376,24 @@ Cakes & Buttercreams,Medium,What cake uses whipped egg whites and cream of tarta
     <div className="w-full max-w-5xl mx-auto space-y-6 animate-in fade-in duration-200">
       
       {/* Top Banner */}
-      <div className="rounded-3xl bg-slate-900/90 border border-slate-800 p-6 sm:p-8 shadow-xl backdrop-blur-md relative overflow-hidden">
-        <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-sky-400 via-sky-300 to-pink-300" />
+      <div className="rounded-3xl bg-white/95 rococo-frame p-6 sm:p-8 shadow-xl relative overflow-hidden">
+        
+        {/* Ribbon Bow */}
+        <div className="absolute -top-3 left-6 text-3xl select-none">
+          🎀
+        </div>
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-pink-950/40 border border-pink-500/40 flex items-center justify-center text-pink-300">
-              <ChefHat className="w-6 h-6" />
+            <div className="w-14 h-14 rounded-full bg-pink-100 border-2 border-neutral-900 flex items-center justify-center text-pink-700 shadow-sm">
+              <ChefHat className="w-7 h-7" />
             </div>
             <div>
-              <h2 className="text-2xl font-black text-slate-100 flex items-center gap-2">
+              <h2 className="font-playfair italic font-black text-2xl sm:text-3xl text-neutral-900 flex items-center gap-2">
                 <span>Teacher Management Console</span>
               </h2>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Authenticated as <strong className="text-pink-300">{currentUser?.username}</strong> · Question Editor, Publication Gates &amp; Validated CSV Import.
+              <p className="text-xs text-neutral-600 mt-0.5">
+                Authenticated as <strong className="text-pink-700 font-bold">{currentUser?.username}</strong> · Question Editor, Publication Gates &amp; Validated CSV Import.
               </p>
             </div>
           </div>
@@ -397,30 +401,30 @@ Cakes & Buttercreams,Medium,What cake uses whipped egg whites and cream of tarta
           <div className="flex items-center gap-2">
             <button
               onClick={() => setTeacherTab('editor')}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              className={`px-3.5 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
                 teacherTab === 'editor'
-                  ? 'bg-pink-950/60 text-pink-300 border border-pink-500/50'
-                  : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+                  ? 'bg-neutral-900 text-white shadow-sm'
+                  : 'bg-pink-50 text-neutral-700 hover:bg-pink-100 border border-pink-200'
               }`}
             >
               Question Editor
             </button>
             <button
               onClick={() => setTeacherTab('csv')}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              className={`px-3.5 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
                 teacherTab === 'csv'
-                  ? 'bg-pink-950/60 text-pink-300 border border-pink-500/50'
-                  : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+                  ? 'bg-neutral-900 text-white shadow-sm'
+                  : 'bg-pink-50 text-neutral-700 hover:bg-pink-100 border border-pink-200'
               }`}
             >
               CSV Upload
             </button>
             <button
               onClick={() => setTeacherTab('settings')}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              className={`px-3.5 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
                 teacherTab === 'settings'
-                  ? 'bg-pink-950/60 text-pink-300 border border-pink-500/50'
-                  : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+                  ? 'bg-neutral-900 text-white shadow-sm'
+                  : 'bg-pink-50 text-neutral-700 hover:bg-pink-100 border border-pink-200'
               }`}
             >
               Quiz Settings
@@ -431,12 +435,12 @@ Cakes & Buttercreams,Medium,What cake uses whipped egg whites and cream of tarta
         {/* Global Alert Notification */}
         {alertMsg && (
           <div
-            className={`mt-4 p-3.5 rounded-2xl border text-xs flex items-center justify-between animate-in fade-in ${
+            className={`mt-4 p-3.5 rounded-2xl border-2 text-xs font-bold flex items-center justify-between animate-in fade-in ${
               alertMsg.type === 'error'
-                ? 'bg-rose-950/60 border-rose-500/40 text-rose-300'
+                ? 'bg-rose-100 border-rose-400 text-rose-900'
                 : alertMsg.type === 'warning'
-                ? 'bg-amber-950/60 border-amber-500/40 text-amber-300'
-                : 'bg-emerald-950/60 border-emerald-500/40 text-emerald-300'
+                ? 'bg-amber-100 border-amber-400 text-amber-900'
+                : 'bg-emerald-100 border-emerald-400 text-emerald-900'
             }`}
           >
             <div className="flex items-center gap-2">
@@ -445,7 +449,7 @@ Cakes & Buttercreams,Medium,What cake uses whipped egg whites and cream of tarta
               {alertMsg.type === 'success' && <CheckCircle2 className="w-4 h-4 flex-shrink-0" />}
               <span>{alertMsg.text}</span>
             </div>
-            <button onClick={() => setAlertMsg(null)} className="text-slate-400 hover:text-slate-200">
+            <button onClick={() => setAlertMsg(null)} className="text-neutral-500 hover:text-neutral-900 cursor-pointer">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -454,14 +458,14 @@ Cakes & Buttercreams,Medium,What cake uses whipped egg whites and cream of tarta
 
       {/* TAB 1: QUESTION EDITOR */}
       {teacherTab === 'editor' && (
-        <div className="rounded-3xl bg-slate-900/90 border border-slate-800 p-6 sm:p-8 shadow-xl space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="rounded-3xl bg-white/95 border-2 border-pink-200 p-6 sm:p-8 shadow-md space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b-2 border-pink-100">
             <div className="flex items-center gap-3">
-              <span className="text-xs font-semibold text-slate-400">Select Quiz:</span>
+              <span className="text-xs font-black uppercase tracking-wider text-neutral-700">Select Quiz:</span>
               <select
                 value={selectedQuizId}
                 onChange={(e) => setSelectedQuizId(e.target.value)}
-                className="bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-pink-400 cursor-pointer font-bold"
+                className="bg-pink-50 border border-pink-300 rounded-xl px-3 py-1.5 text-xs text-neutral-900 focus:outline-none focus:border-pink-500 cursor-pointer font-bold"
               >
                 {quizzes.map((q) => (
                   <option key={q.id} value={q.id}>
@@ -473,10 +477,10 @@ Cakes & Buttercreams,Medium,What cake uses whipped egg whites and cream of tarta
 
             <button
               onClick={handleOpenCreate}
-              className="px-4 py-2 rounded-xl text-xs font-bold text-slate-950 bg-gradient-to-r from-sky-400 to-pink-300 hover:opacity-95 shadow-sm transition-transform active:scale-95 flex items-center gap-1.5 cursor-pointer self-start sm:self-auto"
+              className="px-4 py-2 rounded-full text-xs font-black uppercase tracking-wider text-white bg-neutral-900 hover:bg-pink-600 shadow-xs transition-transform active:scale-95 flex items-center gap-1.5 cursor-pointer self-start sm:self-auto border border-pink-200"
             >
               <Plus className="w-4 h-4" />
-              <span>Add Question</span>
+              <span>Add Question 🥐</span>
             </button>
           </div>
 
@@ -490,34 +494,34 @@ Cakes & Buttercreams,Medium,What cake uses whipped egg whites and cream of tarta
               return (
                 <div
                   key={q.id}
-                  className="p-4 rounded-2xl bg-slate-800/40 border border-slate-700/60 hover:border-slate-600 transition-colors"
+                  className="p-4 rounded-2xl bg-white border-2 border-pink-100 hover:border-pink-300 transition-colors shadow-xs"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="space-y-1.5 flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-[11px] font-mono font-bold text-sky-400 bg-sky-950/40 border border-sky-500/30 px-2 py-0.5 rounded-md">
+                        <span className="text-[11px] font-mono font-black text-pink-700 bg-pink-100 px-2 py-0.5 rounded-full border border-pink-200">
                           #{idx + 1}
                         </span>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 border border-slate-700">
+                        <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-700">
                           {q.difficulty || 'Medium'}
                         </span>
                         {isAnswered && (
-                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-amber-950/50 text-amber-300 border border-amber-500/30">
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
                             Locked in Attempts
                           </span>
                         )}
                       </div>
 
-                      <h4 className="text-sm font-bold text-slate-100">{q.prompt}</h4>
+                      <h4 className="font-playfair font-bold text-sm text-neutral-900">{q.prompt}</h4>
 
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
                         {q.choices.map((c) => (
                           <div
                             key={c.id}
-                            className={`px-2.5 py-1.5 rounded-lg border text-[11px] truncate ${
+                            className={`px-2.5 py-1.5 rounded-xl border text-[11px] truncate ${
                               c.label === q.correctChoice
-                                ? 'bg-emerald-950/50 border-emerald-500/50 text-emerald-300 font-bold'
-                                : 'bg-slate-800/50 border-slate-700/50 text-slate-400'
+                                ? 'bg-emerald-100 border-emerald-400 text-emerald-950 font-bold'
+                                : 'bg-pink-50/50 border-pink-200 text-neutral-700'
                             }`}
                           >
                             <strong>{c.label})</strong> {c.text}
@@ -526,8 +530,8 @@ Cakes & Buttercreams,Medium,What cake uses whipped egg whites and cream of tarta
                       </div>
 
                       {q.explanation && (
-                        <p className="text-[11px] text-slate-400 pt-1 italic">
-                          <strong className="text-sky-300 not-italic">Why: </strong>
+                        <p className="text-[11px] text-neutral-600 pt-1 italic">
+                          <strong className="text-pink-700 not-italic font-bold">Why: </strong>
                           {q.explanation}
                         </p>
                       )}
@@ -536,14 +540,14 @@ Cakes & Buttercreams,Medium,What cake uses whipped egg whites and cream of tarta
                     <div className="flex items-center gap-1.5 flex-shrink-0">
                       <button
                         onClick={() => handleOpenEdit(q)}
-                        className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-sky-300 transition-colors"
+                        className="p-2 rounded-full bg-pink-50 hover:bg-pink-100 text-neutral-700 hover:text-neutral-900 border border-pink-200 transition-colors cursor-pointer"
                         title="Edit question"
                       >
                         <Edit3 className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => handleDeleteQuestion(q.id)}
-                        className="p-2 rounded-xl bg-slate-800 hover:bg-rose-950/40 text-slate-400 hover:text-rose-400 transition-colors"
+                        className="p-2 rounded-full bg-pink-50 hover:bg-rose-100 text-neutral-600 hover:text-rose-600 border border-pink-200 transition-colors cursor-pointer"
                         title="Delete question"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -559,30 +563,30 @@ Cakes & Buttercreams,Medium,What cake uses whipped egg whites and cream of tarta
 
       {/* TAB 2: CSV BULK IMPORT WITH ROW-LEVEL PREVIEW & VALIDATION */}
       {teacherTab === 'csv' && (
-        <div className="rounded-3xl bg-slate-900/90 border border-slate-800 p-6 sm:p-8 shadow-xl space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="rounded-3xl bg-white/95 border-2 border-pink-200 p-6 sm:p-8 shadow-md space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b-2 border-pink-100">
             <div>
-              <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2">
-                <Upload className="w-5 h-5 text-pink-400" />
-                <span>CSV Upload with Validation</span>
+              <h3 className="font-playfair font-bold text-xl text-neutral-900 flex items-center gap-2">
+                <Upload className="w-5 h-5 text-pink-600" />
+                <span>CSV Upload with Row-Level Validation</span>
               </h3>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-xs text-neutral-600 mt-0.5">
                 Upload or paste question data. Every row is verified before committing to the database.
               </p>
             </div>
 
             <button
               onClick={handleDownloadTemplate}
-              className="px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-colors flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
+              className="px-3.5 py-2 rounded-full text-xs font-black uppercase tracking-wider bg-pink-50 hover:bg-pink-100 text-neutral-800 border border-pink-300 transition-colors flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
             >
-              <Download className="w-4 h-4 text-sky-400" />
+              <Download className="w-4 h-4 text-pink-600" />
               <span>Download CSV Template</span>
             </button>
           </div>
 
           {/* Paste or Upload Area */}
           <div>
-            <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
+            <label className="block text-xs font-black uppercase tracking-wider text-neutral-700 mb-2">
               Paste CSV Content
             </label>
             <textarea
@@ -590,22 +594,22 @@ Cakes & Buttercreams,Medium,What cake uses whipped egg whites and cream of tarta
               placeholder="quiz,difficulty,prompt,choiceA,choiceB,choiceC,choiceD,correct,explanation..."
               value={csvRawText}
               onChange={(e) => handleParseCsv(e.target.value)}
-              className="w-full bg-slate-800/90 border border-slate-700 rounded-2xl p-4 font-mono text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-pink-400 transition-colors"
+              className="w-full bg-pink-50/50 border-2 border-pink-200 rounded-2xl p-4 font-mono text-xs text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:border-pink-500 focus:bg-white transition-colors"
             />
           </div>
 
           {/* Row-Level Pre-Commit Validation Summary */}
           {csvSummary && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-800/60 border border-slate-700 text-xs">
+              <div className="flex items-center justify-between p-3.5 rounded-2xl bg-pink-50 border border-pink-200 text-xs">
                 <div className="flex items-center gap-3">
-                  <span className="font-bold text-slate-200">Validation Results:</span>
-                  <span className="text-emerald-400 font-semibold flex items-center gap-1">
+                  <span className="font-bold text-neutral-900">Validation Results:</span>
+                  <span className="text-emerald-700 font-bold flex items-center gap-1">
                     <CheckCircle2 className="w-3.5 h-3.5" />
                     {csvSummary.validCount} Valid
                   </span>
                   {csvSummary.invalidCount > 0 && (
-                    <span className="text-rose-400 font-semibold flex items-center gap-1">
+                    <span className="text-rose-700 font-bold flex items-center gap-1">
                       <XCircle className="w-3.5 h-3.5" />
                       {csvSummary.invalidCount} Invalid (Errors must be resolved)
                     </span>
@@ -615,16 +619,16 @@ Cakes & Buttercreams,Medium,What cake uses whipped egg whites and cream of tarta
                 <button
                   disabled={csvSummary.invalidCount > 0 || csvSummary.validCount === 0}
                   onClick={handleConfirmImport}
-                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-950 bg-gradient-to-r from-sky-400 to-pink-300 hover:opacity-95 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                  className="px-4 py-2 rounded-full text-xs font-black uppercase tracking-wider text-white bg-neutral-900 hover:bg-pink-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
                 >
                   Import {csvSummary.validCount} Questions
                 </button>
               </div>
 
               {/* Table of Parsed Rows */}
-              <div className="overflow-x-auto rounded-2xl border border-slate-800 max-h-72">
-                <table className="w-full text-left text-xs text-slate-300">
-                  <thead className="bg-slate-800/80 text-[11px] uppercase tracking-wider text-slate-400">
+              <div className="overflow-x-auto rounded-2xl border-2 border-pink-200 max-h-72">
+                <table className="w-full text-left text-xs text-neutral-800">
+                  <thead className="bg-pink-100 text-[11px] uppercase tracking-wider text-neutral-700 font-black">
                     <tr>
                       <th className="p-3">Row</th>
                       <th className="p-3">Status</th>
@@ -634,28 +638,28 @@ Cakes & Buttercreams,Medium,What cake uses whipped egg whites and cream of tarta
                       <th className="p-3">Reason / Details</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800 bg-slate-900/60 font-mono text-[11px]">
+                  <tbody className="divide-y divide-pink-100 bg-white font-mono text-[11px]">
                     {csvParsedRows.map((row) => (
-                      <tr key={row.rowNum} className={row.isValid ? 'hover:bg-slate-800/30' : 'bg-rose-950/20'}>
-                        <td className="p-3 font-bold text-slate-400">#{row.rowNum}</td>
+                      <tr key={row.rowNum} className={row.isValid ? 'hover:bg-pink-50/50' : 'bg-rose-50'}>
+                        <td className="p-3 font-bold text-neutral-600">#{row.rowNum}</td>
                         <td className="p-3">
                           {row.isValid ? (
-                            <span className="text-emerald-400 font-sans font-bold flex items-center gap-1">
+                            <span className="text-emerald-700 font-sans font-bold flex items-center gap-1">
                               <CheckCircle2 className="w-3.5 h-3.5" />
                               Valid
                             </span>
                           ) : (
-                            <span className="text-rose-400 font-sans font-bold flex items-center gap-1">
+                            <span className="text-rose-700 font-sans font-bold flex items-center gap-1">
                               <XCircle className="w-3.5 h-3.5" />
                               Error
                             </span>
                           )}
                         </td>
                         <td className="p-3 truncate max-w-[120px] font-sans">{row.quizTitle}</td>
-                        <td className="p-3 truncate max-w-[200px] font-sans text-slate-200">{row.prompt}</td>
-                        <td className="p-3 font-bold text-sky-300">{row.correct}</td>
-                        <td className="p-3 font-sans text-slate-400">
-                          {row.isValid ? 'Ready to import' : <span className="text-rose-300">{row.error}</span>}
+                        <td className="p-3 truncate max-w-[200px] font-sans text-neutral-900">{row.prompt}</td>
+                        <td className="p-3 font-bold text-pink-700">{row.correct}</td>
+                        <td className="p-3 font-sans text-neutral-600">
+                          {row.isValid ? 'Ready to import' : <span className="text-rose-700 font-bold">{row.error}</span>}
                         </td>
                       </tr>
                     ))}
@@ -669,14 +673,14 @@ Cakes & Buttercreams,Medium,What cake uses whipped egg whites and cream of tarta
 
       {/* TAB 3: QUIZ SETTINGS & 10-QUESTION PUBLICATION GATE */}
       {teacherTab === 'settings' && (
-        <div className="rounded-3xl bg-slate-900/90 border border-slate-800 p-6 sm:p-8 shadow-xl space-y-6">
-          <div>
-            <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2">
-              <Clock className="w-5 h-5 text-sky-400" />
+        <div className="rounded-3xl bg-white/95 border-2 border-pink-200 p-6 sm:p-8 shadow-md space-y-6">
+          <div className="pb-4 border-b-2 border-pink-100">
+            <h3 className="font-playfair font-bold text-xl text-neutral-900 flex items-center gap-2">
+              <Clock className="w-5 h-5 text-pink-600" />
               <span>Quiz Settings &amp; Publication Gates</span>
             </h3>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Configure per-question time limits and publication state (strictly enforced: $\ge 10$ questions to publish).
+            <p className="text-xs text-neutral-600 mt-0.5">
+              Configure per-question time limits and publication state (strictly enforced: at least 10 questions to publish).
             </p>
           </div>
 
@@ -688,23 +692,23 @@ Cakes & Buttercreams,Medium,What cake uses whipped egg whites and cream of tarta
               return (
                 <div
                   key={quiz.id}
-                  className="p-5 rounded-2xl bg-slate-800/40 border border-slate-700/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                  className="p-5 rounded-2xl bg-white border-2 border-pink-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs"
                 >
                   <div>
                     <div className="flex items-center gap-2 mb-1">
-                      <h4 className="text-base font-bold text-slate-100">{quiz.title}</h4>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
+                      <h4 className="font-playfair font-bold text-base text-neutral-900">{quiz.title}</h4>
+                      <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase ${
                         quiz.published
-                          ? 'bg-emerald-950/60 text-emerald-300 border border-emerald-500/40'
-                          : 'bg-amber-950/60 text-amber-300 border border-amber-500/40'
+                          ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                          : 'bg-amber-100 text-amber-900 border border-amber-300'
                       }`}>
                         {quiz.published ? 'Published' : 'Draft / Unpublished'}
                       </span>
                     </div>
-                    <div className="text-xs text-slate-400">
-                      Contains <strong className="text-slate-200">{qCount}</strong> questions
+                    <div className="text-xs text-neutral-600">
+                      Contains <strong className="text-neutral-900 font-bold">{qCount}</strong> questions
                       {!canPublish && (
-                        <span className="text-rose-400 ml-2 font-semibold">
+                        <span className="text-rose-700 ml-2 font-bold">
                           (Need at least 10 to publish)
                         </span>
                       )}
@@ -714,11 +718,11 @@ Cakes & Buttercreams,Medium,What cake uses whipped egg whites and cream of tarta
                   <div className="flex items-center gap-4 self-end sm:self-auto">
                     {/* Time limit selector */}
                     <div className="flex items-center gap-2">
-                      <span className="text-xs text-slate-400 font-semibold">Timer:</span>
+                      <span className="text-xs text-neutral-700 font-bold">Timer:</span>
                       <select
                         value={quiz.timeLimitSeconds}
                         onChange={(e) => handleChangeTimeLimit(quiz.id, parseInt(e.target.value, 10))}
-                        className="bg-slate-800 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-sky-400"
+                        className="bg-pink-50 border border-pink-300 rounded-xl px-2.5 py-1.5 text-xs text-neutral-900 font-bold focus:outline-none focus:border-pink-500 cursor-pointer"
                       >
                         <option value={15}>15 seconds</option>
                         <option value={20}>20 seconds</option>
@@ -732,10 +736,10 @@ Cakes & Buttercreams,Medium,What cake uses whipped egg whites and cream of tarta
                     {/* Publish Toggle Button */}
                     <button
                       onClick={() => handleTogglePublish(quiz.id)}
-                      className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
                         quiz.published
-                          ? 'bg-amber-950/40 hover:bg-amber-900/60 text-amber-300 border border-amber-500/40'
-                          : 'bg-emerald-600 hover:bg-emerald-500 text-slate-950 shadow-md'
+                          ? 'bg-pink-100 hover:bg-pink-200 text-neutral-900 border border-pink-300'
+                          : 'bg-neutral-900 hover:bg-pink-600 text-white shadow-xs'
                       }`}
                     >
                       {quiz.published ? 'Unpublish' : 'Publish Quiz'}
@@ -750,18 +754,17 @@ Cakes & Buttercreams,Medium,What cake uses whipped egg whites and cream of tarta
 
       {/* CREATE / EDIT QUESTION MODAL */}
       {isEditingQuestion && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="relative w-full max-w-xl max-h-[90vh] bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl flex flex-col overflow-hidden">
-            <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-sky-400 via-sky-300 to-pink-300" />
-
-            <div className="flex items-center justify-between mb-4 flex-shrink-0">
-              <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2">
-                <ChefHat className="w-5 h-5 text-pink-400" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-950/75 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="relative w-full max-w-xl max-h-[90vh] bg-white border-4 border-neutral-900 rounded-3xl p-6 sm:p-8 shadow-2xl flex flex-col overflow-hidden">
+            
+            <div className="flex items-center justify-between mb-4 flex-shrink-0 pb-3 border-b-2 border-pink-100">
+              <h3 className="font-playfair font-bold text-lg text-neutral-900 flex items-center gap-2">
+                <ChefHat className="w-5 h-5 text-pink-600" />
                 <span>{editingQuestionId ? 'Edit Question' : 'Create New Question'}</span>
               </h3>
               <button
                 onClick={() => setIsEditingQuestion(false)}
-                className="p-1 rounded-xl text-slate-400 hover:text-slate-100"
+                className="p-1 rounded-full text-neutral-500 hover:text-neutral-900 hover:bg-pink-100 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -769,13 +772,13 @@ Cakes & Buttercreams,Medium,What cake uses whipped egg whites and cream of tarta
 
             <form onSubmit={handleSaveQuestion} className="flex-1 overflow-y-auto space-y-4 pr-1">
               <div>
-                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
+                <label className="block text-xs font-black uppercase tracking-wider text-neutral-700 mb-1">
                   Assign to Quiz
                 </label>
                 <select
                   value={formQuizId}
                   onChange={(e) => setFormQuizId(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-100 focus:outline-none focus:border-pink-400"
+                  className="w-full bg-pink-50 border border-pink-300 rounded-xl px-3.5 py-2 text-xs text-neutral-900 font-bold focus:outline-none focus:border-pink-500"
                 >
                   {quizzes.map((q) => (
                     <option key={q.id} value={q.id}>
@@ -786,21 +789,21 @@ Cakes & Buttercreams,Medium,What cake uses whipped egg whites and cream of tarta
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
+                <label className="block text-xs font-black uppercase tracking-wider text-neutral-700 mb-1">
                   Question Prompt
                 </label>
                 <textarea
                   required
                   rows={2}
-                  placeholder="Enter the question prompt..."
+                  placeholder="Enter the baking trivia prompt..."
                   value={formPrompt}
                   onChange={(e) => setFormPrompt(e.target.value)}
-                  className="w-full bg-slate-800/80 border border-slate-700 rounded-xl p-3 text-xs text-slate-100 focus:outline-none focus:border-pink-400"
+                  className="w-full bg-pink-50/50 border-2 border-pink-200 rounded-xl p-3 text-xs text-neutral-900 font-bold placeholder:text-neutral-400 focus:outline-none focus:border-pink-500 focus:bg-white"
                 />
               </div>
 
               <div className="space-y-2">
-                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">
+                <label className="block text-xs font-black uppercase tracking-wider text-neutral-700">
                   Answer Choices &amp; Correct Answer
                 </label>
                 {(['A', 'B', 'C', 'D'] as const).map((label, idx) => (
@@ -808,10 +811,10 @@ Cakes & Buttercreams,Medium,What cake uses whipped egg whites and cream of tarta
                     <button
                       type="button"
                       onClick={() => setFormCorrect(label)}
-                      className={`w-7 h-7 rounded-lg text-xs font-bold flex items-center justify-center transition-all ${
+                      className={`w-7 h-7 rounded-full text-xs font-black flex items-center justify-center transition-all cursor-pointer ${
                         formCorrect === label
-                          ? 'bg-emerald-500 text-slate-950 ring-2 ring-emerald-400'
-                          : 'bg-slate-800 text-slate-400 border border-slate-700'
+                          ? 'bg-neutral-900 text-white ring-2 ring-pink-400'
+                          : 'bg-pink-100 text-neutral-700 border border-pink-300'
                       }`}
                       title="Set as correct choice"
                     >
@@ -827,14 +830,14 @@ Cakes & Buttercreams,Medium,What cake uses whipped egg whites and cream of tarta
                         copy[idx] = e.target.value;
                         setFormChoices(copy);
                       }}
-                      className="flex-1 bg-slate-800/80 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-pink-400"
+                      className="flex-1 bg-pink-50/50 border-2 border-pink-200 rounded-xl px-3 py-1.5 text-xs text-neutral-900 font-bold placeholder:text-neutral-400 focus:outline-none focus:border-pink-500 focus:bg-white"
                     />
                   </div>
                 ))}
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
+                <label className="block text-xs font-black uppercase tracking-wider text-neutral-700 mb-1">
                   Educational Explanation (Shown after answering)
                 </label>
                 <textarea
@@ -842,21 +845,21 @@ Cakes & Buttercreams,Medium,What cake uses whipped egg whites and cream of tarta
                   placeholder="Explain why the answer is correct..."
                   value={formExplanation}
                   onChange={(e) => setFormExplanation(e.target.value)}
-                  className="w-full bg-slate-800/80 border border-slate-700 rounded-xl p-3 text-xs text-slate-100 focus:outline-none focus:border-pink-400"
+                  className="w-full bg-pink-50/50 border-2 border-pink-200 rounded-xl p-3 text-xs text-neutral-900 font-bold placeholder:text-neutral-400 focus:outline-none focus:border-pink-500 focus:bg-white"
                 />
               </div>
 
-              <div className="pt-3 border-t border-slate-800 flex justify-end gap-2 flex-shrink-0">
+              <div className="pt-3 border-t-2 border-pink-100 flex justify-end gap-2 flex-shrink-0">
                 <button
                   type="button"
                   onClick={() => setIsEditingQuestion(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-slate-200"
+                  className="px-4 py-2 rounded-full text-xs font-bold text-neutral-600 hover:text-neutral-900 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl text-xs font-bold text-slate-950 bg-gradient-to-r from-sky-400 to-pink-300 hover:opacity-95 shadow-md flex items-center gap-1.5 cursor-pointer"
+                  className="px-5 py-2 rounded-full text-xs font-black uppercase tracking-wider text-white bg-neutral-900 hover:bg-pink-600 shadow-xs flex items-center gap-1.5 cursor-pointer border border-pink-200"
                 >
                   <Save className="w-3.5 h-3.5" />
                   <span>Save Question</span>

@@ -1,1 +1,96 @@
 @import "tailwindcss";
+
+@layer base {
+  body {
+    background-color: #fdf2f8;
+    color: #262626;
+    font-family: 'Fredoka One', 'Fredoka', cursive, sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6, button, input, select, textarea {
+    font-family: 'Fredoka One', 'Fredoka', cursive, sans-serif;
+  }
+}
+
+.font-fredoka {
+  font-family: 'Fredoka One', 'Fredoka', cursive, sans-serif;
+}
+
+/* Boudoir Vertical Striped Wallpaper from Reference */
+.bg-boudoir-stripes {
+  background-color: #ffffff;
+  background-image: repeating-linear-gradient(
+    90deg,
+    #fce7f3 0px,
+    #fce7f3 38px,
+    #ffffff 38px,
+    #ffffff 76px
+  );
+  background-attachment: fixed;
+}
+
+/* Subtle pink texture overlay */
+.bg-boudoir-stripes-soft {
+  background-color: #ffffff;
+  background-image: repeating-linear-gradient(
+    90deg,
+    #fff1f6 0px,
+    #fff1f6 32px,
+    #ffffff 32px,
+    #ffffff 64px
+  );
+}
+
+/* Vintage Decorative Calligraphy */
+.font-script {
+  font-family: 'Alex Brush', cursive;
+}
+
+.font-playfair {
+  font-family: 'Fredoka One', 'Fredoka', cursive, sans-serif;
+}
+
+.font-cinzel {
+  font-family: 'Fredoka One', 'Fredoka', cursive, sans-serif;
+}
+
+.font-montserrat {
+  font-family: 'Fredoka One', 'Fredoka', cursive, sans-serif;
+}
+
+/* Ornate Scalloped / Lace Border Divider */
+.lace-divider {
+  height: 18px;
+  background-image: radial-gradient(circle, #f472b6 2px, transparent 2.5px),
+                    radial-gradient(circle, #000000 1.5px, transparent 2px);
+  background-size: 16px 12px;
+  background-position: 0 0, 8px 6px;
+  background-repeat: repeat-x;
+  opacity: 0.55;
+}
+
+/* Cameo Ribbon Shadow */
+.cameo-shadow {
+  box-shadow: 0 10px 25px -5px rgba(244, 114, 182, 0.35), 0 8px 10px -6px rgba(0, 0, 0, 0.12);
+}
+
+/* Rococo Frame Border */
+.rococo-frame {
+  border: 4px solid #1a1a1a;
+  outline: 2px solid #fbcfe8;
+  outline-offset: -8px;
+  box-shadow: 0 16px 36px -8px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05);
+}
+
+.boutique-card {
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(8px);
+  border: 2px solid #fbcfe8;
+  box-shadow: 0 10px 25px -4px rgba(244, 114, 182, 0.2), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+}
+
+.boutique-card:hover {
+  border-color: #f472b6;
+  box-shadow: 0 14px 30px -4px rgba(244, 114, 182, 0.3), 0 6px 10px -2px rgba(0, 0, 0, 0.08);
+}
+

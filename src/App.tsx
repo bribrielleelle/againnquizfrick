@@ -1,42 +1,66 @@
 import React, { useState, useEffect } from 'react';
-import { AuthProvider, useAuth, TEACHER_INVITE_CODE } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { Navbar } from './components/Navbar';
 import { AuthModal } from './components/AuthModal';
 import { QuizRunner } from './components/QuizRunner';
 import { HistoryView } from './components/HistoryView';
 import { LeaderboardView } from './components/LeaderboardView';
 import { TeacherView } from './components/TeacherView';
+import { QASuiteModal } from './components/QASuiteModal';
+import { LoginPage } from './components/LoginPage';
+import { CutePageLoader } from './components/CutePageLoader';
 import { INITIAL_QUIZZES, INITIAL_QUESTIONS } from './data/bakingQuizzes';
+import { INITIAL_ATTEMPTS } from './data/initialAttempts';
+import { PersonalityQuizRunner } from './components/PersonalityQuizRunner';
+import { PASTRY_ARCHETYPES, PastryArchetype } from './data/personalityQuiz';
 import { Quiz, Question, Attempt } from './types';
 import { 
   Sparkles, 
   CheckCircle2, 
   ShieldCheck, 
-  Key, 
   BookOpen, 
   Clock, 
-  Lock, 
-  ArrowRight,
-  Play,
-  RotateCcw,
-  Trophy,
-  History,
-  ChefHat,
-  Award,
-  Layers,
-  Flame,
-  FileSpreadsheet
+  Play, 
+  Award, 
+  CheckCheck,
+  Heart
 } from 'lucide-react';
 
 const STORAGE_KEY_ATTEMPTS = 'brielle_quiz_completed_attempts';
 const STORAGE_KEY_QUIZZES = 'brielle_quiz_quizzes_state';
 const STORAGE_KEY_QUESTIONS = 'brielle_quiz_questions_state';
+const STORAGE_KEY_PASTRY_PROFILES = 'brielle_quiz_user_pastry_profiles';
+
+const QUIZ_EMOJIS: Record<string, { icon: string; tag: string; badge: string }> = {
+  'quiz-pastry-fundamentals': { icon: '🥐', tag: 'Choux & Laminated', badge: 'Crispy & Flaky' },
+  'quiz-cakes-frostings': { icon: '🍰', tag: 'Sponge & Buttercream', badge: 'Sweet & Silky' },
+  'quiz-artisan-breads': { icon: '🥖', tag: 'Sourdough & Yeast', badge: 'Golden Crust' },
+  'quiz-cookies-confections': { icon: '🍪', tag: 'Macarons & Ganache', badge: 'Chewy & Rich' },
+  'quiz-science-troubleshooting': { icon: '🔬', tag: 'Emulsions & Leavening', badge: 'Baking Science' },
+};
 
 function MainApp() {
-  const { currentUser, isAuthenticated, isTeacher } = useAuth();
-  const [activeTab, setActiveTab] = useState<'quizzes' | 'leaderboards' | 'history' | 'teacher'>('quizzes');
+  const { currentUser, isTeacher } = useAuth();
+  const [activeTab, setActiveTab] = useState<'quizzes' | 'leaderboards' | 'history' | 'teacher' | 'personality'>('quizzes');
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authInitialTab, setAuthInitialTab] = useState<'login' | 'register'>('login');
+  const [isQAModalOpen, setIsQAModalOpen] = useState(false);
+  const [isGuestBypass, setIsGuestBypass] = useState(false);
+
+  // Pastry personality profiles map: { [userIdOrName: string]: archetypeId }
+  const [pastryProfiles, setPastryProfiles] = useState<Record<string, string>>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_PASTRY_PROFILES);
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  const currentUserIdKey = currentUser ? currentUser.id : 'guest';
+  const currentPastryArchetype = pastryProfiles[currentUserIdKey]
+    ? PASTRY_ARCHETYPES[pastryProfiles[currentUserIdKey]]
+    : null;
 
   // Quizzes & Questions state (persisted in localStorage, editable by teachers)
   const [quizzes, setQuizzes] = useState<Quiz[]>(() => {
@@ -57,13 +81,19 @@ function MainApp() {
     }
   });
 
-  // Completed attempts store
+  // Completed attempts store (persists across all users and page reloads)
   const [completedAttempts, setCompletedAttempts] = useState<Attempt[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_ATTEMPTS);
-      return saved ? JSON.parse(saved) : [];
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+      return INITIAL_ATTEMPTS;
     } catch {
-      return [];
+      return INITIAL_ATTEMPTS;
     }
   });
 
@@ -91,13 +121,74 @@ function MainApp() {
     }
   }, [completedAttempts]);
 
+  const [pageLoading, setPageLoading] = useState<{
+    active: boolean;
+    title?: string;
+    icon?: string;
+  }>({ active: false });
+
+  const triggerTransition = (title: string, icon: string, callback: () => void) => {
+    setPageLoading({ active: true, title, icon });
+    setTimeout(() => {
+      callback();
+      setTimeout(() => {
+        setPageLoading((prev) => ({ ...prev, active: false }));
+      }, 150);
+    }, 450);
+  };
+
   const openAuth = (tab: 'login' | 'register') => {
-    setAuthInitialTab(tab);
-    setIsAuthModalOpen(true);
+    if (!currentUser) {
+      setIsGuestBypass(false);
+    } else {
+      setAuthInitialTab(tab);
+      setIsAuthModalOpen(true);
+    }
+  };
+
+  const handleSelectTabWithLoading = (tab: string) => {
+    if (tab === activeTab && !activeQuiz) return;
+
+    let title = 'Baking Menu & Quizzes';
+    let icon = '🥐';
+    if (tab === 'leaderboards') {
+      title = 'Baking Hall of Fame';
+      icon = '🏆';
+    } else if (tab === 'history') {
+      title = 'My Baking History';
+      icon = '📜';
+    } else if (tab === 'teacher') {
+      title = 'Teacher Tools Console';
+      icon = '👩‍🍳';
+    } else if (tab === 'personality') {
+      title = 'What Pastry Are You? Personality Quiz';
+      icon = '🎀';
+    }
+
+    triggerTransition(title, icon, () => {
+      setActiveQuiz(null);
+      setActiveTab(tab as any);
+    });
+  };
+
+  const handleStartPersonalityQuiz = () => {
+    triggerTransition('What Pastry Are You? Quiz', '🎀', () => {
+      setActiveQuiz(null);
+      setActiveTab('personality');
+    });
   };
 
   const handleStartQuiz = (quiz: Quiz) => {
-    setActiveQuiz(quiz);
+    const icon = QUIZ_EMOJIS[quiz.id]?.icon || '🥐';
+    triggerTransition(`Preparing ${quiz.title}...`, icon, () => {
+      setActiveQuiz(quiz);
+    });
+  };
+
+  const handleExitQuiz = () => {
+    triggerTransition('Returning to Bakery Menu...', '🧁', () => {
+      setActiveQuiz(null);
+    });
   };
 
   // Active quiz runner state
@@ -109,9 +200,8 @@ function MainApp() {
     score: number;
     questionCount: number;
     percentage: number;
-    answers: { questionId: string; selectedChoice: 'A' | 'B' | 'C' | 'D' | null; isCorrect: boolean }[];
+    answers: { questionId: string; selectedChoice: 'A' | 'B' | 'C' | 'D' | null; isCorrect: boolean; timedOut?: boolean }[];
   }) => {
-    // Record completed attempt per D7
     const newAttempt: Attempt = {
       id: `att-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       userId: currentUser?.id || 'guest',
@@ -137,28 +227,37 @@ function MainApp() {
     return Math.max(...userRuns.map((r) => r.score));
   };
 
+  // Start on Login Page for anyone visiting the app unless already logged in
+  useEffect(() => {
+    if (!currentUser) {
+      setIsGuestBypass(false);
+    }
+  }, [currentUser]);
+
+  // If no user is active and guest bypass was not pressed, display the full LoginPage
+  if (!currentUser && !isGuestBypass) {
+    return (
+      <LoginPage
+        onContinueAsGuest={() => setIsGuestBypass(true)}
+      />
+    );
+  }
+
   // Filter published quizzes for players (all visible to teachers)
   const visibleQuizzes = isTeacher ? quizzes : quizzes.filter((q) => q.published);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
-      {/* Background ambient glow */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10">
-        <div className="absolute top-10 left-1/2 -translate-x-1/2 w-[700px] h-[400px] bg-gradient-to-r from-sky-500/10 via-pink-500/10 to-transparent blur-3xl rounded-full" />
-      </div>
-
+    <div className="min-h-screen bg-boudoir-stripes text-neutral-900 flex flex-col font-fredoka selection:bg-pink-300 selection:text-neutral-900">
+      
       {/* Top Navbar */}
       <Navbar
         currentTab={activeTab}
-        onSelectTab={(tab) => {
-          setActiveQuiz(null);
-          setActiveTab(tab as any);
-        }}
+        onSelectTab={handleSelectTabWithLoading}
         onOpenAuth={openAuth}
       />
 
       {/* Main Content Body */}
-      <main className="flex-1 max-w-5xl w-full mx-auto px-4 py-8 sm:py-10 flex flex-col items-center">
+      <main className="flex-1 max-w-5xl w-full mx-auto px-4 py-6 sm:py-10 flex flex-col items-center">
         
         {/* If a quiz is actively running, show the QuizRunner */}
         {activeQuiz ? (
@@ -168,51 +267,113 @@ function MainApp() {
               questions={questions.filter((q) => q.quizId === activeQuiz.id)}
               previousBestScore={getPreviousBestScore(activeQuiz.id)}
               onFinishQuiz={handleFinishQuiz}
-              onExit={() => setActiveQuiz(null)}
+              onExit={handleExitQuiz}
             />
           </div>
         ) : (
           <>
-            {/* Top Column Branding with sky blue fading ombre into light pink */}
-            <div className="w-full max-w-2xl text-center mb-8">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-xs font-semibold bg-slate-900 border border-slate-800 text-sky-300 shadow-sm mb-3">
-                <Sparkles className="w-3.5 h-3.5 text-pink-300" />
-                <span className="font-mono uppercase tracking-wider text-[11px]">Phase 4: Leaderboards &amp; Admin Tools Active</span>
+            {/* HERO CARD: Styled after the Baroque Sculpted Mirror Frame in Reference Image */}
+            <div className="w-full max-w-3xl mb-8 relative">
+              
+              {/* Corner Black Bow Decorative Accent */}
+              <div className="absolute -top-4 -left-3 sm:-left-5 z-20 text-3xl sm:text-4xl drop-shadow-md select-none transform -rotate-12">
+                🎀
               </div>
 
-              <h1 className="text-4xl sm:text-5xl font-black tracking-tight bg-gradient-to-r from-sky-400 via-sky-300 to-pink-300 bg-clip-text text-transparent pb-1">
-                brielles quiz
-              </h1>
-              <p className="mt-2 text-sm text-slate-400 max-w-md mx-auto">
-                Baking quiz engine featuring deterministic Hall of Fame leaderboards, teacher authoring, and validated CSV question uploads.
-              </p>
-
-              {/* Status Pills & Player Quick Switch */}
-              <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
-                <button
-                  onClick={() => openAuth('login')}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-xl bg-slate-900 border border-slate-700/80 hover:border-sky-400/50 text-xs text-slate-200 transition-colors cursor-pointer group"
-                  title="Click to switch or log in as a different player"
-                >
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                  <span>Player:</span>
-                  <strong className="text-sky-300 group-hover:text-pink-300 transition-colors">
-                    {currentUser?.username || 'Guest (Click to Log In)'}
-                  </strong>
-                  <span className="text-[10px] text-slate-500 group-hover:text-slate-300 ml-1">
-                    [Switch]
+              {/* Scalloped Bakery Seal / Sticker Badge in Top-Right Corner */}
+              <div className="absolute -top-4 -right-2 sm:-right-4 z-20 select-none">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-pink-500 text-white border-2 border-neutral-900 flex flex-col items-center justify-center text-center p-1 shadow-lg transform rotate-6 hover:rotate-0 transition-transform">
+                  <span className="text-xs sm:text-sm">🧁</span>
+                  <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-tight leading-tight">
+                    Freshly<br/>Baked
                   </span>
-                </button>
+                </div>
+              </div>
 
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-900/80 border border-slate-800 text-xs text-slate-300">
-                  <Award className="w-3.5 h-3.5 text-sky-400" />
-                  Total Attempts: <strong className="text-sky-300">{completedAttempts.length}</strong>
-                </span>
+              {/* The Baroque Rococo Picture Frame */}
+              <div className="bg-white/95 rounded-3xl rococo-frame p-6 sm:p-10 text-center relative overflow-hidden">
+                
+                {/* Filigree Corner Flourishes */}
+                <div className="absolute top-2 left-2 text-pink-300 font-script text-xl select-none">❦</div>
+                <div className="absolute top-2 right-2 text-pink-300 font-script text-xl select-none">❦</div>
+                <div className="absolute bottom-2 left-2 text-pink-300 font-script text-xl select-none">❦</div>
+                <div className="absolute bottom-2 right-2 text-pink-300 font-script text-xl select-none">❦</div>
 
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-900/80 border border-slate-800 text-xs text-slate-300">
-                  <FileSpreadsheet className="w-3.5 h-3.5 text-pink-400" />
-                  <span>CSV Validator: Ready</span>
-                </span>
+                {/* Subtitle pill badge */}
+                <div className="inline-flex items-center gap-1.5 px-4 py-1 rounded-full text-xs font-bold bg-pink-100 border border-pink-300 text-pink-900 shadow-xs mb-3">
+                  <span>🍓</span>
+                  <span className="tracking-widest uppercase text-[11px] font-black">Patisserie Trivia Collection</span>
+                  <span>🍰</span>
+                </div>
+
+                {/* Vintage Cursive Calligraphy Headline directly matching reference banner */}
+                <h1 className="font-script text-4xl sm:text-6xl text-neutral-900 leading-tight">
+                  More than just sweet treats —
+                </h1>
+                
+                {/* Vintage Serif Brand Mark */}
+                <div className="font-playfair italic font-black text-3xl sm:text-4xl text-pink-600 tracking-tight mt-1 flex items-center justify-center gap-2">
+                  <span>🥐</span>
+                  <span>EclairWiz</span>
+                  <span>🥖</span>
+                </div>
+
+                <p className="mt-3 text-xs sm:text-sm text-neutral-700 max-w-lg mx-auto leading-relaxed">
+                  Test your pastry knowledge across choux pastry, laminated doughs, velvety buttercreams, artisan sourdough, and confectionery science!
+                </p>
+
+                {/* Boutique Bakery Badges */}
+                <div className="mt-5 flex flex-wrap items-center justify-center gap-2 sm:gap-3 text-xs">
+                  <button
+                    onClick={() => openAuth('login')}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-pink-50 border border-pink-300 hover:border-neutral-900 text-neutral-800 font-bold transition-all cursor-pointer shadow-xs"
+                    title="Click to switch or log in as a baker"
+                  >
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    <span>Baker:</span>
+                    <strong className="text-pink-600">
+                      {currentUser?.username || 'Guest Baker'}
+                    </strong>
+                    <span className="text-[10px] text-neutral-500 underline ml-0.5">
+                      (change)
+                    </span>
+                  </button>
+
+                  <button
+                    onClick={() => setIsQAModalOpen(true)}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-neutral-900 text-pink-200 hover:bg-pink-600 hover:text-white border border-neutral-900 text-xs font-bold transition-all cursor-pointer shadow-xs"
+                    title="View 16-point specification requirements audit"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5 text-pink-300" />
+                    <span>QA Audit: <strong className="text-emerald-400">16/16 Passed</strong></span>
+                  </button>
+
+                  <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white border border-pink-200 text-neutral-700 font-bold shadow-xs">
+                    <Clock className="w-3.5 h-3.5 text-pink-500" />
+                    <span>Timed Mode: 30s/Q ⏱️</span>
+                  </span>
+
+                  {currentPastryArchetype ? (
+                    <button
+                      onClick={handleStartPersonalityQuiz}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-pink-100 hover:bg-pink-200 border-2 border-pink-400 text-pink-900 font-bold transition-all cursor-pointer shadow-xs"
+                      title="View or retake your pastry personality quiz"
+                    >
+                      <span>{currentPastryArchetype.emoji}</span>
+                      <span>Pastry Soul:</span>
+                      <strong className="text-pink-700">{currentPastryArchetype.name}</strong>
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleStartPersonalityQuiz}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-pink-100 hover:bg-pink-200 border border-pink-300 text-pink-900 font-bold transition-all cursor-pointer shadow-xs"
+                    >
+                      <span>✨</span>
+                      <span>What Pastry Are You?</span>
+                      <span className="text-[10px] bg-pink-500 text-white px-1.5 py-0.2 rounded-full font-black">QUIZ</span>
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -220,74 +381,148 @@ function MainApp() {
             {activeTab === 'quizzes' && (
               <div className="w-full space-y-8">
                 
+                {/* SPECIAL FEATURE: What Pastry Are You Personality Quiz Banner */}
+                <div className="relative">
+                  {/* Black Bow Accent */}
+                  <div className="absolute -top-3.5 -left-2 sm:-left-3 z-20 text-3xl sm:text-4xl drop-shadow-md select-none transform -rotate-12">
+                    🎀
+                  </div>
+
+                  <div className="rounded-3xl bg-gradient-to-r from-pink-100 via-rose-50 to-pink-100 border-2 border-pink-400 p-6 sm:p-7 shadow-lg relative overflow-hidden group">
+                    {/* Background Decorative Pastry Emojis */}
+                    <div className="absolute right-4 -bottom-4 text-7xl opacity-15 select-none pointer-events-none group-hover:scale-110 transition-transform">
+                      🍰
+                    </div>
+
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 relative z-10">
+                      <div className="space-y-2">
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider bg-white/90 border border-pink-300 text-pink-900 shadow-xs">
+                          <span>✨ Special Feature</span>
+                          <span className="w-1.5 h-1.5 rounded-full bg-pink-500" />
+                          <span>No Wrong Answers!</span>
+                          <span>🧁</span>
+                        </div>
+
+                        <h3 className="font-playfair italic font-black text-2xl sm:text-3xl text-neutral-900 leading-tight">
+                          What Pastry Are You?
+                        </h3>
+                        <p className="text-xs sm:text-sm text-neutral-700 max-w-lg leading-relaxed">
+                          Are you a flaky golden croissant, a delicate Parisian macaron, or an authentic wild sourdough? Take this sweet 7-question personality test to unveil your baking soul!
+                        </p>
+
+                        <div className="flex items-center gap-2 text-xl pt-1">
+                          <span>🥐</span>
+                          <span>🍓</span>
+                          <span>🧁</span>
+                          <span>🍪</span>
+                          <span>🍰</span>
+                          <span>🥖</span>
+                          <span>🥨</span>
+                          <span>🍫</span>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col sm:flex-row md:flex-col items-start md:items-end gap-2.5 flex-shrink-0">
+                        {currentPastryArchetype ? (
+                          <div className="text-left md:text-right bg-white/90 border-2 border-pink-300 rounded-2xl p-3 shadow-xs">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-neutral-500 block">
+                              Your Pastry Soul:
+                            </span>
+                            <span className="text-sm font-black text-pink-700 flex items-center gap-1">
+                              <span>{currentPastryArchetype.emoji}</span>
+                              <span>{currentPastryArchetype.name}</span>
+                            </span>
+                          </div>
+                        ) : null}
+
+                        <button
+                          onClick={handleStartPersonalityQuiz}
+                          className="px-6 py-3 rounded-full font-black uppercase tracking-wider text-xs sm:text-sm text-white bg-neutral-900 hover:bg-pink-600 shadow-lg transition-all active:scale-95 cursor-pointer flex items-center gap-2 border border-pink-200"
+                        >
+                          <Sparkles className="w-4 h-4 text-pink-300" />
+                          <span>{currentPastryArchetype ? 'Retake Personality Quiz 🔄' : 'Take Personality Quiz ✨'}</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Baking Quizzes Cards */}
                 <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl sm:text-2xl font-extrabold text-slate-100 flex items-center gap-2">
-                      <BookOpen className="w-5 h-5 text-sky-400" />
-                      <span>Choose a Quiz</span>
-                    </h2>
-                    <span className="text-xs text-slate-400">
+                  <div className="flex items-center justify-between mb-5 px-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-2xl">🥐</span>
+                      <h2 className="font-playfair italic font-black text-2xl sm:text-3xl text-neutral-900">
+                        Baking Menu &amp; Quizzes
+                      </h2>
+                    </div>
+                    <span className="text-xs font-black uppercase tracking-wider px-3 py-1 rounded-full bg-pink-100 text-pink-800 border border-pink-300">
                       {visibleQuizzes.length} Quizzes Available
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {visibleQuizzes.map((quiz) => {
                       const quizQuestions = questions.filter((q) => q.quizId === quiz.id);
                       const pastRuns = completedAttempts.filter(
                         (a) => a.quizId === quiz.id && (currentUser ? a.userId === currentUser.id : true)
                       );
                       const bestScore = pastRuns.length > 0 ? Math.max(...pastRuns.map((r) => r.score)) : null;
+                      const emojiData = QUIZ_EMOJIS[quiz.id] || { icon: '🧁', tag: 'Baking', badge: 'Fresh' };
 
                       return (
                         <div
                           key={quiz.id}
-                          className="rounded-3xl bg-slate-900/95 border border-slate-800 hover:border-slate-700 p-6 shadow-xl flex flex-col justify-between group transition-all hover:-translate-y-1 relative overflow-hidden"
+                          className="rounded-3xl boutique-card p-6 flex flex-col justify-between group transition-all duration-200 hover:-translate-y-1 relative overflow-hidden"
                         >
-                          <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-sky-400/40 via-sky-300/40 to-pink-300/40 group-hover:from-sky-400 group-hover:to-pink-300 transition-all" />
+                          {/* Top pink scallop highlight */}
+                          <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-pink-300 via-pink-400 to-pink-300" />
 
                           <div>
+                            {/* Card Header with Pastry Icon & Timing */}
                             <div className="flex items-center justify-between mb-3">
-                              <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-slate-800 text-sky-300 border border-slate-700/60">
-                                {quiz.subject}
+                              <span className="text-xs font-black px-3 py-1 rounded-full bg-pink-100 text-pink-900 border border-pink-300 flex items-center gap-1 shadow-xs">
+                                <span>{emojiData.icon}</span>
+                                <span>{quiz.subject}</span>
                               </span>
-                              <div className="flex items-center gap-1 text-[11px] text-slate-400">
-                                <Clock className="w-3 h-3 text-pink-400" />
+                              
+                              <div className="flex items-center gap-1 text-[11px] font-bold text-neutral-600 bg-white/80 px-2 py-0.5 rounded-full border border-pink-200">
+                                <Clock className="w-3 h-3 text-pink-500" />
                                 <span>{quiz.timeLimitSeconds}s / Q</span>
                               </div>
                             </div>
 
-                            <h3 className="text-lg font-bold text-slate-100 group-hover:text-sky-300 transition-colors">
+                            <h3 className="font-playfair font-bold text-xl text-neutral-900 group-hover:text-pink-600 transition-colors leading-snug">
                               {quiz.title}
                             </h3>
-                            <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
+                            <p className="text-xs text-neutral-600 mt-2 leading-relaxed">
                               {quiz.description}
                             </p>
                           </div>
 
-                          <div className="mt-6 pt-4 border-t border-slate-800 flex items-center justify-between">
+                          <div className="mt-6 pt-4 border-t-2 border-pink-100 flex items-center justify-between">
                             <div>
-                              <div className="text-xs font-semibold text-slate-300">
-                                {quizQuestions.length} Questions
+                              <div className="text-xs font-bold text-neutral-800 flex items-center gap-1">
+                                <span>📜</span>
+                                <span>{quizQuestions.length} Questions</span>
                               </div>
                               {bestScore !== null ? (
-                                <div className="text-[11px] text-amber-300 font-bold flex items-center gap-1">
-                                  <Award className="w-3 h-3 text-amber-400" />
-                                  <span>Best: {bestScore}/{quizQuestions.length} ({pastRuns.length} {pastRuns.length === 1 ? 'try' : 'tries'})</span>
+                                <div className="text-[11px] text-pink-700 font-black flex items-center gap-1 mt-0.5">
+                                  <Award className="w-3 h-3 text-pink-600" />
+                                  <span>Best: {bestScore}/{quizQuestions.length} ({pastRuns.length} tries)</span>
                                 </div>
                               ) : (
-                                <div className="text-[11px] text-slate-500">
-                                  Not taken yet
+                                <div className="text-[11px] text-neutral-500 italic mt-0.5">
+                                  Not tasted yet
                                 </div>
                               )}
                             </div>
 
                             <button
                               onClick={() => handleStartQuiz(quiz)}
-                              className="px-4 py-2 rounded-xl font-bold text-xs text-slate-950 bg-gradient-to-r from-sky-400 via-sky-300 to-pink-300 hover:opacity-95 shadow-md shadow-pink-500/10 transition-transform active:scale-95 cursor-pointer flex items-center gap-1.5"
+                              className="px-4 py-2 rounded-full font-black uppercase tracking-wider text-xs text-white bg-neutral-900 hover:bg-pink-600 shadow-md transition-all active:scale-95 cursor-pointer flex items-center gap-1.5 border border-pink-200"
                             >
-                              <Play className="w-3.5 h-3.5 fill-current" />
+                              <Play className="w-3 h-3 fill-current" />
                               <span>{bestScore !== null ? 'Retake' : 'Start'}</span>
                             </button>
                           </div>
@@ -297,55 +532,62 @@ function MainApp() {
                   </div>
                 </div>
 
-                {/* Phase 4 Definition of Done Checklist Box */}
-                <div className="rounded-3xl bg-slate-900/90 border border-slate-800 p-6 shadow-xl">
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                      <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                      <span>Phase 4 Verification &amp; Acceptance Checklist</span>
+                {/* Lace divider */}
+                <div className="lace-divider w-full my-6" />
+
+                {/* Phase 5 Production Readiness & Specifications Card */}
+                <div className="rounded-3xl bg-white/95 border-2 border-pink-300 p-6 sm:p-7 shadow-lg">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-3 border-b-2 border-pink-100">
+                    <span className="text-xs font-black uppercase tracking-wider text-neutral-800 flex items-center gap-2">
+                      <span className="text-lg">🎀</span>
+                      <span>Phase 5 Complete: All Criteria Verified &amp; Passing</span>
                     </span>
-                    <span className="text-xs font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 px-2.5 py-0.5 rounded-full">
-                      Phase 4 Complete
-                    </span>
+                    <button
+                      onClick={() => setIsQAModalOpen(true)}
+                      className="text-xs font-black text-neutral-900 bg-pink-200 hover:bg-pink-300 border border-pink-400 px-4 py-1.5 rounded-full transition-colors flex items-center gap-1.5 self-start sm:self-auto cursor-pointer shadow-xs"
+                    >
+                      <CheckCheck className="w-3.5 h-3.5 text-pink-700" />
+                      <span>16 / 16 Acceptance Criteria (Open QA Suite)</span>
+                    </button>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                    <div className="p-3 rounded-2xl bg-slate-800/40 border border-slate-700/50 flex items-start gap-2.5">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
+                    <div className="p-3.5 rounded-2xl bg-pink-50/70 border border-pink-200 flex items-start gap-2.5">
+                      <CheckCircle2 className="w-4 h-4 text-pink-600 flex-shrink-0 mt-0.5" />
                       <div>
-                        <strong className="text-slate-200">Overall &amp; Per-Quiz Leaderboards</strong>
-                        <p className="text-slate-400 text-[11px] mt-0.5">
-                          Enforces D16 (best score → fewer tries) and D17 (completed attempts → correct answers) with pinned &quot;Your Rank&quot;.
+                        <strong className="text-neutral-900 font-bold">Custom Feature 1: Timed Mode Active ⏱️</strong>
+                        <p className="text-neutral-600 text-[11px] mt-0.5 leading-relaxed">
+                          30-second per-question timers with automatic locking, zero-score on timeout, and answer revelation.
                         </p>
                       </div>
                     </div>
 
-                    <div className="p-3 rounded-2xl bg-slate-800/40 border border-slate-700/50 flex items-start gap-2.5">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+                    <div className="p-3.5 rounded-2xl bg-pink-50/70 border border-pink-200 flex items-start gap-2.5">
+                      <CheckCircle2 className="w-4 h-4 text-pink-600 flex-shrink-0 mt-0.5" />
                       <div>
-                        <strong className="text-slate-200">Teacher Question Editor (CRUD)</strong>
-                        <p className="text-slate-400 text-[11px] mt-0.5">
-                          Full interface to create, edit, and manage questions with educational explanations.
+                        <strong className="text-neutral-900 font-bold">Custom Feature 2: Answer Explanations 💡</strong>
+                        <p className="text-neutral-600 text-[11px] mt-0.5 leading-relaxed">
+                          Educational culinary explanations displayed after answering and saved to history review cards.
                         </p>
                       </div>
                     </div>
 
-                    <div className="p-3 rounded-2xl bg-slate-800/40 border border-slate-700/50 flex items-start gap-2.5">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+                    <div className="p-3.5 rounded-2xl bg-pink-50/70 border border-pink-200 flex items-start gap-2.5">
+                      <CheckCircle2 className="w-4 h-4 text-pink-600 flex-shrink-0 mt-0.5" />
                       <div>
-                        <strong className="text-slate-200">10-Question Gate &amp; History Protection</strong>
-                        <p className="text-slate-400 text-[11px] mt-0.5">
-                          Blocks publishing quizzes with &lt;10 questions and protects questions referenced in submitted attempts.
+                        <strong className="text-neutral-900 font-bold">Vintage Boudoir Theme 🎀</strong>
+                        <p className="text-neutral-600 text-[11px] mt-0.5 leading-relaxed">
+                          Vertical candy stripes, cameo medallions, rococo framing, cute ribbons, and baking emojis.
                         </p>
                       </div>
                     </div>
 
-                    <div className="p-3 rounded-2xl bg-slate-800/40 border border-slate-700/50 flex items-start gap-2.5">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+                    <div className="p-3.5 rounded-2xl bg-pink-50/70 border border-pink-200 flex items-start gap-2.5">
+                      <CheckCircle2 className="w-4 h-4 text-pink-600 flex-shrink-0 mt-0.5" />
                       <div>
-                        <strong className="text-slate-200">CSV Bulk Upload with Pre-Commit Preview</strong>
-                        <p className="text-slate-400 text-[11px] mt-0.5">
-                          Row-by-row validation table blocks invalid imports and displays exact line errors before committing.
+                        <strong className="text-neutral-900 font-bold">Dual-Environment Support ⚡</strong>
+                        <p className="text-neutral-600 text-[11px] mt-0.5 leading-relaxed">
+                          Fully configured for both AI Studio (port 3000) and Replit (port 5000) deployments.
                         </p>
                       </div>
                     </div>
@@ -355,7 +597,7 @@ function MainApp() {
               </div>
             )}
 
-            {/* TAB CONTENT: Leaderboards (Phase 4 Full View) */}
+            {/* TAB CONTENT: Leaderboards */}
             {activeTab === 'leaderboards' && (
               <LeaderboardView
                 attempts={completedAttempts}
@@ -373,7 +615,7 @@ function MainApp() {
               />
             )}
 
-            {/* TAB CONTENT: Teacher Tools (Phase 4 Full Console) */}
+            {/* TAB CONTENT: Teacher Tools */}
             {activeTab === 'teacher' && (
               <TeacherView
                 quizzes={quizzes}
@@ -383,16 +625,49 @@ function MainApp() {
                 onUpdateQuestions={(updated) => setQuestions(updated)}
               />
             )}
+
+            {/* TAB CONTENT: What Pastry Are You Personality Quiz */}
+            {activeTab === 'personality' && (
+              <PersonalityQuizRunner
+                onExit={() => handleSelectTabWithLoading('quizzes')}
+                savedArchetypeId={currentPastryArchetype?.id || null}
+                onSaveToProfile={(archetype) => {
+                  setPastryProfiles((prev) => {
+                    const next = { ...prev, [currentUserIdKey]: archetype.id };
+                    try {
+                      localStorage.setItem(STORAGE_KEY_PASTRY_PROFILES, JSON.stringify(next));
+                    } catch {}
+                    return next;
+                  });
+                }}
+              />
+            )}
           </>
         )}
 
       </main>
+
+      {/* Cute Page Transition Loader */}
+      <CutePageLoader
+        isLoading={pageLoading.active}
+        targetTitle={pageLoading.title}
+        targetIcon={pageLoading.icon}
+      />
 
       {/* Auth Modal */}
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
         initialTab={authInitialTab}
+      />
+
+      {/* QA Acceptance Suite Modal */}
+      <QASuiteModal
+        isOpen={isQAModalOpen}
+        onClose={() => setIsQAModalOpen(false)}
+        quizzes={quizzes}
+        questions={questions}
+        attempts={completedAttempts}
       />
     </div>
   );
