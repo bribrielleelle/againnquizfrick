@@ -143,9 +143,12 @@ export const QASuiteModal: React.FC<QASuiteModalProps> = ({
               <h3 className="font-playfair font-black text-xl text-neutral-900">
                 Phase 5 QA &amp; Acceptance Suite
               </h3>
+              <span className="text-[10px] uppercase font-black px-2 py-0.5 rounded-full bg-pink-100 text-pink-800 border border-pink-300">
+                Teacher Only
+              </span>
             </div>
             <p className="text-xs text-neutral-600 mt-0.5">
-              Automated audit verifying all 16 criteria from the Course Project Specification.
+              Teacher audit console verifying all 16 criteria from the Course Project Specification.
             </p>
           </div>
 

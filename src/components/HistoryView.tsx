@@ -88,7 +88,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
                 <span>My Baking History</span>
               </h2>
               <p className="text-xs text-neutral-600 mt-0.5">
-                Logged in as <strong className="text-pink-700 font-bold">{currentUser?.username || 'Guest Baker'}</strong> · Every completed attempt is saved per Phase 3 specifications.
+                Logged in as <strong className="text-pink-700 font-bold">{currentUser?.username || 'Guest Baker'}</strong> · Every completed attempt is saved to your bakery record.
               </p>
             </div>
           </div>

@@ -13,6 +13,7 @@ import {
   AlertTriangle, 
   Clock, 
   ShieldAlert, 
+  ShieldCheck,
   Save, 
   X
 } from 'lucide-react';
@@ -23,6 +24,7 @@ interface TeacherViewProps {
   attempts: Attempt[];
   onUpdateQuizzes: (updated: Quiz[]) => void;
   onUpdateQuestions: (updated: Question[]) => void;
+  onOpenQASuite?: () => void;
 }
 
 interface ParsedCsvRow {
@@ -46,6 +48,7 @@ export const TeacherView: React.FC<TeacherViewProps> = ({
   attempts,
   onUpdateQuizzes,
   onUpdateQuestions,
+  onOpenQASuite,
 }) => {
   const { isTeacher, currentUser } = useAuth();
 
@@ -429,6 +432,17 @@ export const TeacherView: React.FC<TeacherViewProps> = ({
             >
               Quiz Settings
             </button>
+
+            {onOpenQASuite && (
+              <button
+                onClick={onOpenQASuite}
+                className="px-3.5 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-all cursor-pointer bg-neutral-900 hover:bg-pink-600 text-pink-200 hover:text-white border border-neutral-900 flex items-center gap-1.5 shadow-xs"
+                title="Open Phase 5 QA Suite (16/16 Acceptance Criteria)"
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-pink-300" />
+                <span>Phase 5 QA Suite</span>
+              </button>
+            )}
           </div>
         </div>
 

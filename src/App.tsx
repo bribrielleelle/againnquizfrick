@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Navbar } from './components/Navbar';
 import { AuthModal } from './components/AuthModal';
@@ -23,7 +23,8 @@ import {
   Play, 
   Award, 
   CheckCheck,
-  Heart
+  Heart,
+  Lock
 } from 'lucide-react';
 
 const STORAGE_KEY_ATTEMPTS = 'brielle_quiz_completed_attempts';
@@ -45,7 +46,6 @@ function MainApp() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authInitialTab, setAuthInitialTab] = useState<'login' | 'register'>('login');
   const [isQAModalOpen, setIsQAModalOpen] = useState(false);
-  const [isGuestBypass, setIsGuestBypass] = useState(false);
 
   // Pastry personality profiles map: { [userIdOrName: string]: archetypeId }
   const [pastryProfiles, setPastryProfiles] = useState<Record<string, string>>(() => {
@@ -121,6 +121,19 @@ function MainApp() {
     }
   }, [completedAttempts]);
 
+  const [isGuestMode, setIsGuestMode] = useState(false);
+  const [guestLoginNotice, setGuestLoginNotice] = useState<string | null>(null);
+
+  // If a logged-in user logs out, return them to the full LoginPage
+  const prevUserRef = useRef(currentUser);
+  useEffect(() => {
+    if (prevUserRef.current && !currentUser) {
+      setIsGuestMode(false);
+      setGuestLoginNotice(null);
+    }
+    prevUserRef.current = currentUser;
+  }, [currentUser]);
+
   const [pageLoading, setPageLoading] = useState<{
     active: boolean;
     title?: string;
@@ -139,7 +152,11 @@ function MainApp() {
 
   const openAuth = (tab: 'login' | 'register') => {
     if (!currentUser) {
-      setIsGuestBypass(false);
+      // In guest mode, clicking login switches to the dedicated LoginPage
+      triggerTransition('Opening Baker Login...', '🎀', () => {
+        setGuestLoginNotice(null);
+        setIsGuestMode(false);
+      });
     } else {
       setAuthInitialTab(tab);
       setIsAuthModalOpen(true);
@@ -148,6 +165,15 @@ function MainApp() {
 
   const handleSelectTabWithLoading = (tab: string) => {
     if (tab === activeTab && !activeQuiz) return;
+
+    // Personality quiz requires login
+    if (tab === 'personality' && !currentUser) {
+      triggerTransition('Login Required...', '🔒', () => {
+        setGuestLoginNotice('Login is mandatory to unveil your Pastry Soul! Please sign in or choose an account below.');
+        setIsGuestMode(false);
+      });
+      return;
+    }
 
     let title = 'Baking Menu & Quizzes';
     let icon = '🥐';
@@ -172,6 +198,15 @@ function MainApp() {
   };
 
   const handleStartPersonalityQuiz = () => {
+    // If guest clicks personality quiz, redirect to login page per requirement
+    if (!currentUser) {
+      triggerTransition('Login Required to Play...', '🔒', () => {
+        setGuestLoginNotice('Login is mandatory to take the "What Pastry Are You?" quiz! Please log in or select an account below.');
+        setIsGuestMode(false);
+      });
+      return;
+    }
+
     triggerTransition('What Pastry Are You? Quiz', '🎀', () => {
       setActiveQuiz(null);
       setActiveTab('personality');
@@ -179,6 +214,15 @@ function MainApp() {
   };
 
   const handleStartQuiz = (quiz: Quiz) => {
+    // If guest clicks on any quiz, redirect to login page per requirement
+    if (!currentUser) {
+      triggerTransition('Login Required to Play...', '🔒', () => {
+        setGuestLoginNotice(`Login is mandatory to start "${quiz.title}"! Sign in or choose an account below to record your score.`);
+        setIsGuestMode(false);
+      });
+      return;
+    }
+
     const icon = QUIZ_EMOJIS[quiz.id]?.icon || '🥐';
     triggerTransition(`Preparing ${quiz.title}...`, icon, () => {
       setActiveQuiz(quiz);
@@ -227,18 +271,16 @@ function MainApp() {
     return Math.max(...userRuns.map((r) => r.score));
   };
 
-  // Start on Login Page for anyone visiting the app unless already logged in
-  useEffect(() => {
-    if (!currentUser) {
-      setIsGuestBypass(false);
-    }
-  }, [currentUser]);
-
-  // If no user is active and guest bypass was not pressed, display the full LoginPage
-  if (!currentUser && !isGuestBypass) {
+  // Mandatory Login Gate: Unauthenticated users start on LoginPage unless browsing as guest.
+  // When a guest clicks on any quiz, they are redirected back to LoginPage with a mandatory notice.
+  if (!currentUser && !isGuestMode) {
     return (
       <LoginPage
-        onContinueAsGuest={() => setIsGuestBypass(true)}
+        onContinueAsGuest={() => {
+          setIsGuestMode(true);
+          setGuestLoginNotice(null);
+        }}
+        guestPromptMessage={guestLoginNotice}
       />
     );
   }
@@ -272,6 +314,28 @@ function MainApp() {
           </div>
         ) : (
           <>
+            {/* Guest Mode Active Banner */}
+            {!currentUser && isGuestMode && (
+              <div className="w-full max-w-3xl mb-4 p-3.5 rounded-2xl bg-white/95 border-2 border-pink-400 shadow-md flex items-center justify-between gap-3 animate-in fade-in">
+                <div className="flex items-center gap-2.5 text-xs text-neutral-800">
+                  <span className="text-xl">🧁</span>
+                  <div>
+                    <span className="font-bold text-pink-800">Guest Baker Mode:</span>
+                    <span className="text-neutral-600 ml-1.5">You can browse the bakery menu &amp; leaderboards. Clicking any quiz requires logging in!</span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setGuestLoginNotice(null);
+                    setIsGuestMode(false);
+                  }}
+                  className="px-3.5 py-1.5 rounded-full text-xs font-black uppercase tracking-wider text-white bg-neutral-900 hover:bg-pink-600 transition-colors flex-shrink-0 cursor-pointer shadow-xs border border-pink-200"
+                >
+                  Log In
+                </button>
+              </div>
+            )}
+
             {/* HERO CARD: Styled after the Baroque Sculpted Mirror Frame in Reference Image */}
             <div className="w-full max-w-3xl mb-8 relative">
               
@@ -327,26 +391,29 @@ function MainApp() {
                   <button
                     onClick={() => openAuth('login')}
                     className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-pink-50 border border-pink-300 hover:border-neutral-900 text-neutral-800 font-bold transition-all cursor-pointer shadow-xs"
-                    title="Click to switch or log in as a baker"
+                    title={currentUser ? "Click to switch baker profile" : "Click to log in"}
                   >
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className={`w-2 h-2 rounded-full ${currentUser ? 'bg-emerald-500 animate-pulse' : 'bg-amber-400'}`} />
                     <span>Baker:</span>
                     <strong className="text-pink-600">
-                      {currentUser?.username || 'Guest Baker'}
+                      {currentUser?.username || 'Guest Baker (Browsing)'}
                     </strong>
-                    <span className="text-[10px] text-neutral-500 underline ml-0.5">
-                      (change)
+                    <span className="text-[10px] text-pink-700 font-bold underline ml-0.5">
+                      {currentUser ? '(change)' : '(log in)'}
                     </span>
                   </button>
 
-                  <button
-                    onClick={() => setIsQAModalOpen(true)}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-neutral-900 text-pink-200 hover:bg-pink-600 hover:text-white border border-neutral-900 text-xs font-bold transition-all cursor-pointer shadow-xs"
-                    title="View 16-point specification requirements audit"
-                  >
-                    <ShieldCheck className="w-3.5 h-3.5 text-pink-300" />
-                    <span>QA Audit: <strong className="text-emerald-400">16/16 Passed</strong></span>
-                  </button>
+                  {/* QA Audit badge - Only visible to teacher accounts */}
+                  {isTeacher && (
+                    <button
+                      onClick={() => setIsQAModalOpen(true)}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-neutral-900 text-pink-200 hover:bg-pink-600 hover:text-white border border-neutral-900 text-xs font-bold transition-all cursor-pointer shadow-xs"
+                      title="Teacher Access: View 16-point specification requirements audit"
+                    >
+                      <ShieldCheck className="w-3.5 h-3.5 text-pink-300" />
+                      <span>Teacher QA Audit: <strong className="text-emerald-400">16/16 Passed</strong></span>
+                    </button>
+                  )}
 
                   <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white border border-pink-200 text-neutral-700 font-bold shadow-xs">
                     <Clock className="w-3.5 h-3.5 text-pink-500" />
@@ -438,9 +505,19 @@ function MainApp() {
                         <button
                           onClick={handleStartPersonalityQuiz}
                           className="px-6 py-3 rounded-full font-black uppercase tracking-wider text-xs sm:text-sm text-white bg-neutral-900 hover:bg-pink-600 shadow-lg transition-all active:scale-95 cursor-pointer flex items-center gap-2 border border-pink-200"
+                          title={!currentUser ? "Login mandatory to take personality quiz - Click to sign in" : undefined}
                         >
-                          <Sparkles className="w-4 h-4 text-pink-300" />
-                          <span>{currentPastryArchetype ? 'Retake Personality Quiz 🔄' : 'Take Personality Quiz ✨'}</span>
+                          {!currentUser ? (
+                            <>
+                              <Lock className="w-4 h-4 text-pink-300" />
+                              <span>Take Quiz (Login Required)</span>
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="w-4 h-4 text-pink-300" />
+                              <span>{currentPastryArchetype ? 'Retake Personality Quiz 🔄' : 'Take Personality Quiz ✨'}</span>
+                            </>
+                          )}
                         </button>
                       </div>
                     </div>
@@ -521,9 +598,19 @@ function MainApp() {
                             <button
                               onClick={() => handleStartQuiz(quiz)}
                               className="px-4 py-2 rounded-full font-black uppercase tracking-wider text-xs text-white bg-neutral-900 hover:bg-pink-600 shadow-md transition-all active:scale-95 cursor-pointer flex items-center gap-1.5 border border-pink-200"
+                              title={!currentUser ? "Login is mandatory to start this quiz - Click to log in" : undefined}
                             >
-                              <Play className="w-3 h-3 fill-current" />
-                              <span>{bestScore !== null ? 'Retake' : 'Start'}</span>
+                              {!currentUser ? (
+                                <>
+                                  <Lock className="w-3 h-3 text-pink-300" />
+                                  <span>Start (Login)</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Play className="w-3 h-3 fill-current" />
+                                  <span>{bestScore !== null ? 'Retake' : 'Start'}</span>
+                                </>
+                              )}
                             </button>
                           </div>
                         </div>
@@ -532,67 +619,71 @@ function MainApp() {
                   </div>
                 </div>
 
-                {/* Lace divider */}
-                <div className="lace-divider w-full my-6" />
+                {/* Phase 5 Production Readiness & Specifications Card - Teacher Only */}
+                {isTeacher && (
+                  <>
+                    {/* Lace divider */}
+                    <div className="lace-divider w-full my-6" />
 
-                {/* Phase 5 Production Readiness & Specifications Card */}
-                <div className="rounded-3xl bg-white/95 border-2 border-pink-300 p-6 sm:p-7 shadow-lg">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-3 border-b-2 border-pink-100">
-                    <span className="text-xs font-black uppercase tracking-wider text-neutral-800 flex items-center gap-2">
-                      <span className="text-lg">🎀</span>
-                      <span>Phase 5 Complete: All Criteria Verified &amp; Passing</span>
-                    </span>
-                    <button
-                      onClick={() => setIsQAModalOpen(true)}
-                      className="text-xs font-black text-neutral-900 bg-pink-200 hover:bg-pink-300 border border-pink-400 px-4 py-1.5 rounded-full transition-colors flex items-center gap-1.5 self-start sm:self-auto cursor-pointer shadow-xs"
-                    >
-                      <CheckCheck className="w-3.5 h-3.5 text-pink-700" />
-                      <span>16 / 16 Acceptance Criteria (Open QA Suite)</span>
-                    </button>
-                  </div>
+                    <div className="rounded-3xl bg-white/95 border-2 border-pink-300 p-6 sm:p-7 shadow-lg">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-3 border-b-2 border-pink-100">
+                        <span className="text-xs font-black uppercase tracking-wider text-neutral-800 flex items-center gap-2">
+                          <span className="text-lg">🎀</span>
+                          <span>Phase 5 Complete: All Criteria Verified &amp; Passing (Teacher Access)</span>
+                        </span>
+                        <button
+                          onClick={() => setIsQAModalOpen(true)}
+                          className="text-xs font-black text-neutral-900 bg-pink-200 hover:bg-pink-300 border border-pink-400 px-4 py-1.5 rounded-full transition-colors flex items-center gap-1.5 self-start sm:self-auto cursor-pointer shadow-xs"
+                        >
+                          <CheckCheck className="w-3.5 h-3.5 text-pink-700" />
+                          <span>16 / 16 Acceptance Criteria (Open QA Suite)</span>
+                        </button>
+                      </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
-                    <div className="p-3.5 rounded-2xl bg-pink-50/70 border border-pink-200 flex items-start gap-2.5">
-                      <CheckCircle2 className="w-4 h-4 text-pink-600 flex-shrink-0 mt-0.5" />
-                      <div>
-                        <strong className="text-neutral-900 font-bold">Custom Feature 1: Timed Mode Active ⏱️</strong>
-                        <p className="text-neutral-600 text-[11px] mt-0.5 leading-relaxed">
-                          30-second per-question timers with automatic locking, zero-score on timeout, and answer revelation.
-                        </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
+                        <div className="p-3.5 rounded-2xl bg-pink-50/70 border border-pink-200 flex items-start gap-2.5">
+                          <CheckCircle2 className="w-4 h-4 text-pink-600 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <strong className="text-neutral-900 font-bold">Custom Feature 1: Timed Mode Active ⏱️</strong>
+                            <p className="text-neutral-600 text-[11px] mt-0.5 leading-relaxed">
+                              30-second per-question timers with automatic locking, zero-score on timeout, and answer revelation.
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="p-3.5 rounded-2xl bg-pink-50/70 border border-pink-200 flex items-start gap-2.5">
+                          <CheckCircle2 className="w-4 h-4 text-pink-600 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <strong className="text-neutral-900 font-bold">Custom Feature 2: Answer Explanations 💡</strong>
+                            <p className="text-neutral-600 text-[11px] mt-0.5 leading-relaxed">
+                              Educational culinary explanations displayed after answering and saved to history review cards.
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="p-3.5 rounded-2xl bg-pink-50/70 border border-pink-200 flex items-start gap-2.5">
+                          <CheckCircle2 className="w-4 h-4 text-pink-600 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <strong className="text-neutral-900 font-bold">Vintage Boudoir Theme 🎀</strong>
+                            <p className="text-neutral-600 text-[11px] mt-0.5 leading-relaxed">
+                              Vertical candy stripes, cameo medallions, rococo framing, cute ribbons, and baking emojis.
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="p-3.5 rounded-2xl bg-pink-50/70 border border-pink-200 flex items-start gap-2.5">
+                          <CheckCircle2 className="w-4 h-4 text-pink-600 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <strong className="text-neutral-900 font-bold">Dual-Environment Support ⚡</strong>
+                            <p className="text-neutral-600 text-[11px] mt-0.5 leading-relaxed">
+                              Fully configured for both AI Studio (port 3000) and Replit (port 5000) deployments.
+                            </p>
+                          </div>
+                        </div>
                       </div>
                     </div>
-
-                    <div className="p-3.5 rounded-2xl bg-pink-50/70 border border-pink-200 flex items-start gap-2.5">
-                      <CheckCircle2 className="w-4 h-4 text-pink-600 flex-shrink-0 mt-0.5" />
-                      <div>
-                        <strong className="text-neutral-900 font-bold">Custom Feature 2: Answer Explanations 💡</strong>
-                        <p className="text-neutral-600 text-[11px] mt-0.5 leading-relaxed">
-                          Educational culinary explanations displayed after answering and saved to history review cards.
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="p-3.5 rounded-2xl bg-pink-50/70 border border-pink-200 flex items-start gap-2.5">
-                      <CheckCircle2 className="w-4 h-4 text-pink-600 flex-shrink-0 mt-0.5" />
-                      <div>
-                        <strong className="text-neutral-900 font-bold">Vintage Boudoir Theme 🎀</strong>
-                        <p className="text-neutral-600 text-[11px] mt-0.5 leading-relaxed">
-                          Vertical candy stripes, cameo medallions, rococo framing, cute ribbons, and baking emojis.
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="p-3.5 rounded-2xl bg-pink-50/70 border border-pink-200 flex items-start gap-2.5">
-                      <CheckCircle2 className="w-4 h-4 text-pink-600 flex-shrink-0 mt-0.5" />
-                      <div>
-                        <strong className="text-neutral-900 font-bold">Dual-Environment Support ⚡</strong>
-                        <p className="text-neutral-600 text-[11px] mt-0.5 leading-relaxed">
-                          Fully configured for both AI Studio (port 3000) and Replit (port 5000) deployments.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                  </>
+                )}
 
               </div>
             )}
@@ -623,6 +714,7 @@ function MainApp() {
                 attempts={completedAttempts}
                 onUpdateQuizzes={(updated) => setQuizzes(updated)}
                 onUpdateQuestions={(updated) => setQuestions(updated)}
+                onOpenQASuite={() => setIsQAModalOpen(true)}
               />
             )}
 
