@@ -94,38 +94,3 @@
   box-shadow: 0 14px 30px -4px rgba(244, 114, 182, 0.3), 0 6px 10px -2px rgba(0, 0, 0, 0.08);
 }
 
-/* Separate swans for the regular cursor and clickable targets */
-html,
-body {
-  cursor: url('./assets/swan-cursor.png') 2 2, auto;
-}
-
-button,
-a,
-[role='button'],
-[role='link'],
-select,
-summary,
-.cursor-pointer {
-  cursor: url('./assets/swan-pointer.png') 2 2, pointer;
-}
-
-input:not([type='button']):not([type='submit']):not([type='checkbox']):not([type='radio']),
-textarea,
-[contenteditable='true'] {
-  cursor: text;
-}
-
-@media (pointer: coarse) {
-  html,
-  body,
-  button,
-  a,
-  [role='button'],
-  [role='link'],
-  select,
-  summary,
-  .cursor-pointer {
-    cursor: auto;
-  }
-}
