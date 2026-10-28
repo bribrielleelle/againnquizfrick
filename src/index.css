@@ -94,10 +94,10 @@
   box-shadow: 0 14px 30px -4px rgba(244, 114, 182, 0.3), 0 6px 10px -2px rgba(0, 0, 0, 0.08);
 }
 
-/* Transparent crop of the supplied pixel-art cat-and-heart cursor */
+/* Separate swans for the regular cursor and clickable targets */
 html,
 body {
-  cursor: url('./assets/heart-cat-cursor.png') 41 2, auto;
+  cursor: url('./assets/swan-cursor.png') 2 2, auto;
 }
 
 button,
@@ -107,7 +107,7 @@ a,
 select,
 summary,
 .cursor-pointer {
-  cursor: url('./assets/heart-cat-cursor.png') 41 2, pointer;
+  cursor: url('./assets/swan-pointer.png') 2 2, pointer;
 }
 
 input:not([type='button']):not([type='submit']):not([type='checkbox']):not([type='radio']),
