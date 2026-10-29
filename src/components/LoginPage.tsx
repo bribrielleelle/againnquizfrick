@@ -384,7 +384,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               <span>Browse Bakery in Guest Mode →</span>
             </button>
             <p className="text-[11px] text-neutral-600 mt-2 font-medium">
-              You can explore quizzes, menu, and leaderboards as a guest baker! However, clicking to start any quiz will require logging in.
+              You can explore quizzes, menu, and leaderboards as a guest baker! However, clicking to start any quiz or check your baking history will require signing up or logging in.
             </p>
           </div>
         )}
@@ -396,7 +396,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             <span>Baker Authentication Policy</span>
           </div>
           <p className="text-[11px] text-neutral-600 mt-0.5">
-            Guest mode allows browsing only. To take quizzes and submit scores to the hall of fame, a logged-in account is mandatory.
+            Guest mode allows browsing only. To take quizzes, record high scores, or check your baking history, signing up or signing in is mandatory.
           </p>
         </div>
 

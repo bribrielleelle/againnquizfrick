@@ -175,6 +175,15 @@ function MainApp() {
       return;
     }
 
+    // Checking history requires login
+    if (tab === 'history' && !currentUser) {
+      triggerTransition('Login Required to Check History...', '🔒', () => {
+        setGuestLoginNotice('In order to check history you have to sign up or sign in as well! Please log in or create an account to view your past quiz attempts.');
+        setIsGuestMode(false);
+      });
+      return;
+    }
+
     let title = 'Baking Menu & Quizzes';
     let icon = '🥐';
     if (tab === 'leaderboards') {
@@ -321,7 +330,7 @@ function MainApp() {
                   <span className="text-xl">🧁</span>
                   <div>
                     <span className="font-bold text-pink-800">Guest Baker Mode:</span>
-                    <span className="text-neutral-600 ml-1.5">You can browse the bakery menu &amp; leaderboards. Clicking any quiz requires logging in!</span>
+                    <span className="text-neutral-600 ml-1.5">You can browse the bakery menu &amp; leaderboards. Taking quizzes and checking history require signing up or logging in!</span>
                   </div>
                 </div>
                 <button
@@ -698,12 +707,35 @@ function MainApp() {
 
             {/* TAB CONTENT: My History */}
             {activeTab === 'history' && (
-              <HistoryView
-                attempts={completedAttempts}
-                quizzes={quizzes}
-                allQuestions={questions}
-                onRetakeQuiz={(quiz) => handleStartQuiz(quiz)}
-              />
+              currentUser ? (
+                <HistoryView
+                  attempts={completedAttempts}
+                  quizzes={quizzes}
+                  allQuestions={questions}
+                  onRetakeQuiz={(quiz) => handleStartQuiz(quiz)}
+                />
+              ) : (
+                <div className="w-full max-w-xl mx-auto p-8 rounded-3xl bg-white/95 rococo-frame text-center space-y-4 shadow-xl animate-in fade-in">
+                  <div className="w-14 h-14 mx-auto rounded-full bg-pink-100 border-2 border-neutral-900 flex items-center justify-center text-2xl shadow-sm">
+                    📜
+                  </div>
+                  <h3 className="font-playfair italic font-black text-2xl text-neutral-900">
+                    Baking History Requires Sign-In
+                  </h3>
+                  <p className="text-xs sm:text-sm text-neutral-600 max-w-md mx-auto leading-relaxed">
+                    In order to check history you have to sign up or sign in as well! Please log in or create an account to view your past quiz attempts and scores.
+                  </p>
+                  <button
+                    onClick={() => {
+                      setGuestLoginNotice('In order to check history you have to sign up or sign in as well!');
+                      setIsGuestMode(false);
+                    }}
+                    className="px-6 py-2.5 rounded-full bg-neutral-900 hover:bg-pink-600 text-white font-black text-xs uppercase tracking-wider transition-all shadow-md cursor-pointer border border-pink-200"
+                  >
+                    Sign In / Sign Up
+                  </button>
+                </div>
+              )
             )}
 
             {/* TAB CONTENT: Teacher Tools */}

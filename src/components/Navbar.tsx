@@ -12,7 +12,8 @@ import {
   Settings, 
   RotateCcw,
   Users,
-  Sparkles
+  Sparkles,
+  Lock
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -245,9 +246,15 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onSelectTab, onOpenA
                 ? 'bg-pink-500 text-neutral-950 font-black shadow-inner scale-105'
                 : 'text-pink-100 hover:text-white hover:bg-neutral-800'
             }`}
+            title={!currentUser ? 'Sign up or sign in required to check history' : undefined}
           >
             <span>📜</span>
             <span>MY HISTORY</span>
+            {!currentUser && (
+              <span className="text-[10px] bg-pink-950 text-pink-300 border border-pink-700 px-1.5 py-0.5 rounded-full font-sans font-bold flex items-center gap-0.5 ml-0.5">
+                <Lock className="w-2.5 h-2.5" />
+              </span>
+            )}
           </button>
 
           <button
