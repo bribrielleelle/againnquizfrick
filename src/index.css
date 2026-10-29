@@ -94,10 +94,10 @@
   box-shadow: 0 14px 30px -4px rgba(244, 114, 182, 0.3), 0 6px 10px -2px rgba(0, 0, 0, 0.08);
 }
 
-/* Cookie cursor with a bitten version for clickable elements */
+/* Plain croissant cursor, with the strawberry croissant for clickable elements */
 html,
 body {
-  cursor: url('./assets/cookie-cursor.png') 16 16, auto;
+  cursor: url('./assets/plain-croissant-cursor.png') 3 3, auto;
 }
 
 button,
@@ -107,6 +107,6 @@ a,
 select,
 summary,
 .cursor-pointer {
-  cursor: url('./assets/cookie-bite-cursor.png') 16 16, pointer;
+  cursor: url('./assets/strawberry-croissant-pointer.png') 3 3, pointer;
 }
 
