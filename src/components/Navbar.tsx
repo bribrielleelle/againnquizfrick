@@ -228,6 +228,19 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onSelectTab, onOpenA
           </button>
 
           <button
+            onClick={() => onSelectTab('recipes')}
+            className={`px-3 sm:px-4 py-1.5 rounded-md font-playfair italic tracking-wider text-xs sm:text-sm font-bold uppercase transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+              currentTab === 'recipes'
+                ? 'bg-pink-500 text-neutral-950 font-black shadow-inner scale-105'
+                : 'text-pink-100 hover:text-white hover:bg-neutral-800'
+            }`}
+          >
+            <span>🍰</span>
+            <span>RECIPES</span>
+            <span className="text-[10px] bg-pink-400 text-neutral-950 px-1.5 py-0.2 rounded-full font-black">NEW</span>
+          </button>
+
+          <button
             onClick={() => onSelectTab('leaderboards')}
             className={`px-3 sm:px-4 py-1.5 rounded-md font-playfair italic tracking-wider text-xs sm:text-sm font-bold uppercase transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
               currentTab === 'leaderboards'

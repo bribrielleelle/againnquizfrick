@@ -12,6 +12,7 @@ import { CutePageLoader } from './components/CutePageLoader';
 import { INITIAL_QUIZZES, INITIAL_QUESTIONS } from './data/bakingQuizzes';
 import { INITIAL_ATTEMPTS } from './data/initialAttempts';
 import { PersonalityQuizRunner } from './components/PersonalityQuizRunner';
+import { RecipesView } from './components/RecipesView';
 import { PASTRY_ARCHETYPES, PastryArchetype } from './data/personalityQuiz';
 import { Quiz, Question, Attempt } from './types';
 import { 
@@ -42,7 +43,7 @@ const QUIZ_EMOJIS: Record<string, { icon: string; tag: string; badge: string }> 
 
 function MainApp() {
   const { currentUser, isTeacher } = useAuth();
-  const [activeTab, setActiveTab] = useState<'quizzes' | 'leaderboards' | 'history' | 'teacher' | 'personality'>('quizzes');
+  const [activeTab, setActiveTab] = useState<'quizzes' | 'recipes' | 'leaderboards' | 'history' | 'teacher' | 'personality'>('quizzes');
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authInitialTab, setAuthInitialTab] = useState<'login' | 'register'>('login');
   const [isQAModalOpen, setIsQAModalOpen] = useState(false);
@@ -186,7 +187,10 @@ function MainApp() {
 
     let title = 'Baking Menu & Quizzes';
     let icon = '🥐';
-    if (tab === 'leaderboards') {
+    if (tab === 'recipes') {
+      title = 'Artisanal Sweet & Dessert Recipes';
+      icon = '🍰';
+    } else if (tab === 'leaderboards') {
       title = 'Baking Hall of Fame';
       icon = '🏆';
     } else if (tab === 'history') {
@@ -428,6 +432,16 @@ function MainApp() {
                     <Clock className="w-3.5 h-3.5 text-pink-500" />
                     <span>Timed Mode: 30s/Q ⏱️</span>
                   </span>
+
+                  <button
+                    onClick={() => handleSelectTabWithLoading('recipes')}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-pink-100 hover:bg-pink-200 border border-pink-300 text-pink-900 font-bold transition-all cursor-pointer shadow-xs"
+                    title="Browse our sweet & dessert recipe collection"
+                  >
+                    <span>🍰</span>
+                    <span>Sweet &amp; Dessert Recipes</span>
+                    <span className="text-[10px] bg-pink-500 text-white px-1.5 py-0.2 rounded-full font-black">NEW</span>
+                  </button>
 
                   {currentPastryArchetype ? (
                     <button
@@ -695,6 +709,18 @@ function MainApp() {
                 )}
 
               </div>
+            )}
+
+            {/* TAB CONTENT: Sweets & Desserts Recipes */}
+            {activeTab === 'recipes' && (
+              <RecipesView
+                onStartQuizById={(quizId) => {
+                  const quiz = quizzes.find((q) => q.id === quizId);
+                  if (quiz) {
+                    handleStartQuiz(quiz);
+                  }
+                }}
+              />
             )}
 
             {/* TAB CONTENT: Leaderboards */}
